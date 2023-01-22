@@ -55,7 +55,7 @@ const httpServer = http.createServer(app);
 const server = new ApolloServer<Context>({
     schema: await buildSchema({
         resolvers: [AttachmentResolver],
-        emitSchemaFile: '../docs/schema.gql',
+        emitSchemaFile: './docs/schema.gql',
         validate: false,
         scalarsMap,
     }),
