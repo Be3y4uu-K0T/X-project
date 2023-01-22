@@ -2,7 +2,7 @@
 settings.json
 
 # CDN
-/server/public/cdn
+/server/cdn/*
 
 # Production
 /client/build
