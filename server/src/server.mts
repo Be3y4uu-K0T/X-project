@@ -66,6 +66,7 @@ await server.start();
 app.use(bodyparser.json());
 app.use(express.urlencoded({ extended: true }));
 
+// GraphQL
 app.use('/api', cors<cors.CorsRequest>(),
     expressMiddleware<Context>(server, {
         context: async ({ req, res }) => {
@@ -97,14 +98,14 @@ app.post('/cdn', upload.single('file'), async (req, res) => { // TODO: Add auth 
     res.json({ url });
 });
 
-// TODO
+// React App
 app.use(express.static(path.resolve('./client/build')));
 app.use(express.static(path.resolve('./client/public')));
-
 app.use((req, res, next) => {
     res.sendFile(path.resolve('./client/build/index.html'));
 });
 
+// Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_UNEXPECTED_FILE')
