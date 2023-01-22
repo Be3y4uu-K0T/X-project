@@ -95,7 +95,7 @@ app.post('/cdn', upload.single('file'), async (req, res) => { // TODO: Add auth 
     const _id = ObjectId.createFromHexString(file.filename);
     const document = await AttachmentModel.create({ _id, url, filename, mimetype, size }); // TODO: Add user field.
     await document.save();
-    res.json({ url });
+    res.json({ id: _id, url });
 });
 
 // React App
