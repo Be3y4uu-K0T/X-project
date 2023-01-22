@@ -65,6 +65,19 @@ export const DateTimeScalar = new GraphQLScalarType({
     },
 });
 
+export class DateTimeMongo extends mongoose.SchemaType {
+    constructor(key: string, options: any) {
+        super(key, options, 'DateTime');
+    }
+
+    public cast(value: unknown) {
+        if (typeof value === 'string')
+            return DateTime.fromISO(value);
+        throw new Error(`Value is not a valid string for DateTime: ${value}`);
+    }
+}
+(mongoose.Schema.Types as any).DateTime = DateTimeMongo;
+
 export const DateScalar = new GraphQLScalarType({
     name: 'Date',
     description: 'An ISO-8601 encoded date string.',
@@ -125,6 +138,19 @@ export const IntervalScalar = new GraphQLScalarType({
     },
 });
 
+export class IntervalMongo extends mongoose.SchemaType {
+    constructor(key: string, options: any) {
+        super(key, options, 'Interval');
+    }
+
+    public cast(value: unknown) {
+        if (typeof value === 'string')
+            return Interval.fromISO(value);
+        throw new Error(`Value is not a valid string for Interval: ${value}`);
+    }
+}
+(mongoose.Schema.Types as any).Interval = IntervalMongo;
+
 export const DurationScalar = new GraphQLScalarType({
     name: 'Duration',
     description: 'An ISO 8601 encoded duration string.',
@@ -144,6 +170,19 @@ export const DurationScalar = new GraphQLScalarType({
         throw new GraphQLError(`Can only validate strings as Duration but got a: ${ast.kind}`, { nodes: ast });
     },
 });
+
+export class DurationMongo extends mongoose.SchemaType {
+    constructor(key: string, options: any) {
+        super(key, options, 'Duration');
+    }
+
+    public cast(value: unknown) {
+        if (typeof value === 'string')
+            return Duration.fromISO(value);
+        throw new Error(`Value is not a valid string for Duration: ${value}`);
+    }
+}
+(mongoose.Schema.Types as any).Duration = DurationMongo;
 
 export const TimestampScalar = new GraphQLScalarType({
     name: 'Timestamp',
@@ -166,6 +205,21 @@ export const TimestampScalar = new GraphQLScalarType({
         throw new GraphQLError(`Can only validate integers as Duration but got a: ${ast.kind}`, { nodes: ast });
     },
 });
+
+export class TimestampMongo extends mongoose.SchemaType {
+    constructor(key: string, options: any) {
+        super(key, options, 'Timestamp');
+    }
+
+    public cast(value: unknown) {
+        if (typeof value === 'string')
+            value = Number.parseInt(value, 10);
+        if (typeof value === 'number')
+            return DateTime.fromMillis(value);
+        throw new Error(`Value is not a valid string or number for DateTime: ${value}`);
+    }
+}
+(mongoose.Schema.Types as any).Timestamp = TimestampMongo;
 
 const EMAIL_ADDRESS_REGEXP = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
