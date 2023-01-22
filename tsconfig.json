@@ -8,7 +8,6 @@
         "module": "esnext",
         "moduleResolution": "node",
         "esModuleInterop": true,
-        "strictPropertyInitialization": false,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
         "resolveJsonModule": true,

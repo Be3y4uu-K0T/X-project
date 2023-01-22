@@ -639,11 +639,11 @@ registerEnumType(EventStatus, {
 @ObjectType({ description: 'Вложение.' })
 export class Attachment {
     @Field()
-    readonly _id: ObjectId;
+    readonly _id!: ObjectId;
 
     @Field({ description: 'Ссылка на вложение.' })
     @Property({ required: true})
-    url: string;
+    url!: string;
 
     @Field({ description: 'Имя файла вложения.', nullable: true })
     @Property()
@@ -651,11 +651,11 @@ export class Attachment {
 
     @Field({ description: 'Тип файла вложения.' })
     @Property({ required: true })
-    mimetype: string;
+    mimetype!: string;
 
     @Field({ description: 'Размер файла вложения.' })
     @Property({ required: true })
-    size: number;
+    size!: number;
 
     /* TODO:
     @Field(_type => User, { description: 'Автор загрузки вложения.' })
@@ -668,7 +668,7 @@ export class Attachment {
 export class AttachmentInput {
     @Field({ description: 'Ссылка на вложение.' })
     @Length(1, 255)
-    url: string;
+    url!: string;
 
     @Field({ description: 'Имя файла вложения.', nullable: true })
     @Length(1, 32)
@@ -676,11 +676,11 @@ export class AttachmentInput {
 
     @Field({ description: 'Тип файла вложения.' })
     @MaxLength(64)
-    mimetype: string;
+    mimetype!: string;
 
     @Field(_type => Int, { description: 'Размер файла вложения.' })
     @IsInt()
-    size: number;
+    size!: number;
 
     /* TODO:
     @Field(_type => User, { description: 'Автор загрузки вложения.' })
