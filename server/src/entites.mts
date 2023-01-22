@@ -1,8 +1,10 @@
 import { prop as Property, getModelForClass as createModelFrom } from '@typegoose/typegoose';
 import { GraphQLScalarType, ValueNode, Kind, GraphQLError } from 'graphql';
 import { ScalarsTypeMap } from 'type-graphql/dist/schema/build-context';
+import type { Ref, DocumentType } from '@typegoose/typegoose';
 import { DateTime, Interval, Duration } from 'luxon';
 import { ObjectId } from 'mongodb';
+import mongoose from 'mongoose';
 import {
     registerEnumType,
     createUnionType,
@@ -19,7 +21,9 @@ import {
     Ctx,
     ID,
     Args,
-    Int
+    Int,
+    InterfaceType,
+    Float
 } from 'type-graphql';
 import { IsInt, Length, MaxLength } from 'class-validator';
 
@@ -652,6 +656,7 @@ registerEnumType(RequestResourceStatus, {
 });
 
 export enum ResourceStatus {
+    WAITING,
     ACTIVE,
     INACTIVE,
 }
@@ -660,6 +665,7 @@ registerEnumType(ResourceStatus, {
     name: 'ResourceStatus',
     description: 'Статус объекта (ресурса)',
     valuesConfig: {
+        WAITING: { description: 'ОЖИДАНИЕ' },
         ACTIVE: { description: 'АКТИВНО' },
         INACTIVE: { description: 'НЕАКТИВНО' },
     },
@@ -683,10 +689,10 @@ registerEnumType(EventStatus, {
 
 /* UNIONS */
 
-// const AttachmentUnion = createUnionType({
-//     name: 'Attachment',
-//     types: [Photo, Video]
-// });
+const TouristResource = createUnionType({
+    name: 'TouristResource',
+    types: () => [TouristEvent, TouristRoute, TouristSite] as const
+});
 
 /* TYPES */
 
@@ -762,3 +768,515 @@ export class AttachmentResolver {
 }
 
 export const AttachmentModel = createModelFrom(Attachment);
+
+
+@ObjectType({ description: 'Элемент адреса' })
+export class AddressElement {
+    @Field({ description: 'Вид/Тип' })
+    @Property({ required: true })
+    type!: string;
+
+    @Field({ description: 'Наименование/Номер' })
+    @Property({ required: true })
+    designation!: string;
+}
+
+@ObjectType({ description: 'Адрес' })
+export class Address {
+    @Field(_type => Country, { description: 'Страна (наименование)' })
+    @Property({ required: true })
+    country!: Country;
+
+    @Field({ description: 'Субъект (наименование)' })
+    @Property({ required: true })
+    subject!: string;
+
+    @Field({ description: 'Городской округ (наименование)' })
+    @Property({ required: true })
+    district!: string;
+
+    @Field(_type => AddressElement, { description: 'Населенный пункт (вид, наименование)' })
+    @Property({ required: true })
+    locality!: AddressElement;
+
+    @Field(_type => AddressElement, { description: 'Элемент улично-дорожной сети (вид, наименование)' })
+    @Property({ required: true })
+    street!: AddressElement;
+
+    @Field(_type => AddressElement, { description: 'Здание/сооружение (тип, номер)' })
+    @Property({ required: true })
+    building!: AddressElement;
+
+    @Field(_type => AddressElement, { description: 'Здание/сооружение [доп.] (тип, номер)', nullable: true })
+    @Property()
+    additional?: AddressElement;
+
+    @Field(_type => Int, { description: 'Номер квартири/офиса [доп.]', nullable: true })
+    @Property()
+    apartament?: number;
+}
+
+@ObjectType({ description: 'Геопозиция' })
+export class GeoLocation {
+    @Field(_type => LatitudeScalar, { description: 'Широта' })
+    @Property({ required: true })
+    latitude!: number;
+
+    @Field(_type => LongitudeScalar, { description: 'Долгота' })
+    @Property({ required: true })
+    longitude!: number;
+}
+
+@ObjectType({ description: 'Контакные данные' })
+export class Contact {
+    @Field(_type => Address, { description: 'Адрес', nullable: true })
+    @Property()
+    address!: Address;
+
+    @Field(_type => GeoLocation, { description: 'Геопозиция (для карты)', nullable: true })
+    @Property()
+    location!: GeoLocation;
+
+    /* TODO
+    @Field(_type => PassportScalar, { description: 'Паспортные данные', nullable: true })
+    @Property()
+    passport!: string;
+    */
+
+    @Field(_type => PhoneNumberScalar, { description: 'Номер контактного телефона', nullable: true })
+    @Property()
+    phone!: string;
+
+    @Field(_type => EmailScalar, { description: 'Адрес электронной почты', nullable: true })
+    @Property()
+    email!: string;
+}
+
+/*
+ * Администратор # Admin    (!)
+ * Разработчик   # Developer(!)
+ * Владелец      # Owner    (!)
+ * Клиент        # Client   (!)
+ * Никто         # NoBody   (ø) // NotAuth
+ * Пользователь  # User     (Admin | Developer | Owner | Client) // Auth
+ * Все           # Everyone (AnyBody | NoBody)
+*/
+
+@InterfaceType({ description: 'Пользователь' })
+export abstract class User {
+    @Field()
+    readonly _id!: ObjectId;
+
+    @Field(_type => DateTimeScalar)
+    @Property({ required: true, type: DateTimeMongo })
+    created_at!: DateTime;
+
+    @Field(_type => Contact)
+    @Property({ required: true })
+    contact!: Contact;
+}
+
+@ObjectType({ description: 'Администратор', implements: User })
+export class Admin extends User {
+    /* TODO: Do need extra fields? */
+}
+
+@ObjectType({ description: 'Разработчик', implements: User })
+export class Developer extends User {
+    @Field(_type => Rating, { description: 'Рейтинг' })
+    @Property({ required: true })
+    rating!: Rating;
+}
+
+@ObjectType({ description: 'Владелец', implements: User })
+export class Owner extends User {
+    @Field({ description: 'Фамилия' })
+    @Property({ required: true })
+    lastaname!: string;
+
+    @Field({ description: 'Отчество' })
+    @Property({ required: true })
+    middlename!: string;
+
+    @Field({ description: 'Имя' })
+    @Property({ required: true })
+    firstname!: string;
+
+    @Field({ description: 'Полное ФИО' })
+    @Property({ default: function (this: DocumentType<Guide>) {
+        return `${this.lastaname} ${this.firstname} ${this.middlename}`;
+    }})
+    public fullname?: string;
+
+    @Field(_type => [TouristSite], { description: 'Туристические точки (ресурсы)' })
+    @Property({ required: true, ref: 'TouristSite' })
+    sites!: Ref<TouristSite>[];
+
+    @Field(_type => [TouristRoute], { description: 'Туристические маршруты (продукты)' })
+    @Property({ required: true, ref: 'TouristSite' })
+    routes!: Ref<TouristRoute>[];
+
+    @Field(_type => Rating, { description: 'Рейтинг' })
+    @Property({ required: true })
+    rating!: Rating;
+}
+
+@ObjectType({ description: 'Клиент', implements: User })
+export class Client extends User {
+    @Field({ description: 'Фамилия', nullable: true })
+    @Property()
+    lastaname?: string;
+
+    @Field({ description: 'Отчество', nullable: true })
+    @Property()
+    middlename?: string;
+
+    @Field({ description: 'Имя', nullable: true })
+    @Property()
+    firstname?: string;
+
+    @Field({ description: 'Полное ФИО' })
+    @Property({ default: function (this: DocumentType<Client>) {
+        if (this.lastaname && this.firstname && this.middlename)
+            return `${this.lastaname} ${this.firstname} ${this.middlename}`;
+    }})
+    public fullname?: string;
+
+    @Field(_type => DateScalar, { description: 'Дата рождения', nullable: true })
+    @Property({ type: DateTimeMongo })
+    birthday?: DateTime;
+}
+
+@ObjectType({ description: 'Экскурсовод', implements: User })
+export class Guide extends User {
+    @Field({ description: 'Фамилия' })
+    @Property({ required: true })
+    lastaname!: string;
+
+    @Field({ description: 'Отчество' })
+    @Property({ required: true })
+    middlename!: string;
+
+    @Field({ description: 'Имя' })
+    @Property({ required: true })
+    firstname!: string;
+
+    @Field({ description: 'Полное ФИО' })
+    @Property({ default: function (this: DocumentType<Guide>) {
+        return `${this.lastaname} ${this.firstname} ${this.middlename}`;
+    }})
+    public fullname?: string;
+
+    @Field(_type => Rating, { description: 'Рейтинг' })
+    @Property({ required: true })
+    rating!: Rating;
+}
+
+@ObjectType({ description: 'Рейтинг' })
+export class Rating {
+    @Field(_type => [Review], { description: 'Отзывы' })
+    @Property({ ref: 'Review' })
+    reviews!: Ref<Review>[];
+
+    @Field(_type => Float, { description: 'Оценка' })
+    @Property({ required: true })
+    score!: number;
+}
+
+@ObjectType({ description: 'Оценка комментария (полезность)' })
+export class Usefulness {
+    @Field(_type => Int, { description: 'Кол-во отметок "ЗА"' })
+    @Property()
+    like: number = 0;
+
+    @Field(_type => Int, { description: 'Кол-во отметок "ПРОТИВ"' })
+    @Property()
+    dislike: number = 0;
+}
+
+@ObjectType({ description: 'Отзыв' })
+export class Review {
+    @Field()
+    readonly _id!: ObjectId;
+
+    @Field(_type => DateTimeScalar)
+    @Property({ required: true, type: DateTimeMongo })
+    created_at!: DateTime;
+
+    @Field(_type => DateTimeScalar, { description: 'Временная метка "ИЗМЕНЕННО" (отредактировано)', nullable: true })
+    @Property({ type: DateTimeMongo })
+    edited_at?: DateTime;
+
+    @Field(_type => Float, { description: 'Оценка' })
+    @Property({ required: true })
+    score!: number;
+
+    @Field({ description: 'Заголовок', nullable: true })
+    @Property()
+    title?: string;
+
+    @Field({ description: 'Контент (отзыв)', nullable: true })
+    @Property()
+    content?: string;
+
+    @Field(_type => User, { description: 'Автор отзыва' })
+    @Property({ ref: 'User' })
+    author!: Ref<User>;
+
+    @Field(_type => [Attachment], { description: 'Вложения' })
+    @Property({ required: true, ref: 'Attachment' })
+    attachments!: Ref<Attachment>[];
+
+    @Field(_type => Usefulness)
+    @Property({ required: true })
+    usefulness!: Usefulness;
+}
+
+export const ReviewModel = createModelFrom(Review);
+
+@ObjectType({ description: 'Комментарий' })
+export class Comment {
+    @Field()
+    readonly _id!: ObjectId;
+
+    @Field(_type => DateTimeScalar)
+    @Property({ required: true, type: DateTimeMongo })
+    created_at!: DateTime;
+
+    @Field(_type => DateTimeScalar, { description: 'Временная метка "ИЗМЕНЕННО" (отредактировано)', nullable: true })
+    @Property({ type: DateTimeMongo })
+    edited_at?: DateTime;
+
+    @Field({ description: 'Контент (комментарий)', nullable: true })
+    @Property()
+    content?: string;
+
+    @Field(_type => User, { description: 'Автор комментария' })
+    @Property({ ref: 'User' })
+    author!: Ref<User>;
+
+    @Field(_type => [Attachment], { description: '' })
+    @Property({ required: true, ref: 'Attachment' })
+    attachments!: Ref<Attachment>[];
+
+    @Field(_type => Int, { description: 'Кол-во отметок "ПОЛЕЗНО"' })
+    @Property()
+    usefulness: number = 0;
+
+    @Field(_type => [Comment], { description: 'Ответы (комментарие)' })
+    @Property({ ref: 'Comment' })
+    reply: Ref<Comment>[] = [];
+}
+
+export const CommentModel = createModelFrom(Comment);
+
+@ObjectType({ description: 'Время работы' })
+export class WorkingHours {
+    @Field(_type => TimeScalar, { description: 'Время открытия' })
+    @Property({ required: true, type: DateTimeMongo })
+    opening!: DateTime;
+
+    @Field(_type => TimeScalar, { description: 'Время закрытия' })
+    @Property({ required: true, type: DateTimeMongo })
+    closing!: DateTime;
+}
+
+@ObjectType({ description: 'Даты работы [для временных «событий»]' })
+export class WorkingDays {
+    @Field(_type => DateScalar, { description: 'Дата начала' })
+    @Property({ required: true, type: DateTimeMongo })
+    start!: DateTime;
+
+    @Field(_type => DateScalar, { description: 'Дата окончания' })
+    @Property({ required: true, type: DateTimeMongo })
+    end!: DateTime;
+}
+
+@ObjectType({ description: 'Туристический объект (ресурс)' })
+export class TouristSite {
+    @Field()
+    readonly _id!: ObjectId;
+
+    @Field(_type => Owner, { description: 'Владелец' })
+    @Property({ required: true, ref: 'Owner' })
+    owner!: Ref<Owner>;
+
+    @Field({ description: 'Наименование' })
+    @Property({ required: true })
+    name!: string;
+
+    @Field({ description: 'Описание', nullable: true })
+    @Property()
+    description?: string;
+
+    @Field(_type => Contact)
+    @Property({ required: true })
+    contact!: Contact;
+
+    @Field(_type => WorkingHours, { description: 'Часы работы', nullable: true })
+    @Property()
+    wokringhours?: WorkingHours;
+
+    @Field(_type => WorkingDays, { description: 'Дата проведения', nullable: true })
+    @Property()
+    wokringdays?: WorkingDays;
+
+    @Field(_type => [Attachment], { description: 'Вложения' })
+    @Property({ required: true, ref: 'Attachment' })
+    attachments!: Ref<Attachment>[];
+
+    @Field(_type => DurationScalar, { description: 'Длительность', nullable: true })
+    @Property({ type: DurationMongo })
+    duration?: Duration;
+
+    @Field(_type => Rating, { description: 'Рейтинг' })
+    @Property({ required: true })
+    rating!: Rating;
+
+    @Field(_type => ResourceStatus, { description: 'Статус объекта (ресурса)' })
+    @Property({ enum: RequestStatus, type: String })
+    staus: ResourceStatus = ResourceStatus.WAITING;
+}
+
+@ObjectType({ description: 'Туристический маршрут (ресурс)' })
+export class TouristRoute {
+    @Field()
+    readonly _id!: ObjectId;
+
+    @Field(_type => Developer, { description: 'Разработчик' })
+    @Property({ required: true, ref: 'Developer'})
+    developer!: Ref<Developer>;
+
+    @Field({ description: 'Наименование' })
+    @Property({ required: true })
+    name!: string;
+
+    @Field({ description: 'Описание', nullable: true })
+    @Property()
+    description?: string;
+
+    @Field(_type => Contact)
+    @Property({ required: true })
+    contact!: Contact;
+
+    @Field(_type => WorkingHours, { description: 'Часы работы', nullable: true })
+    @Property()
+    wokringhours?: WorkingHours;
+
+    @Field(_type => WorkingDays, { description: 'Дата проведения' })
+    @Property()
+    wokringdays?: WorkingDays;
+
+    @Field(_type => [Attachment], { description: 'Вложения' })
+    @Property({ required: true, ref: 'Attachment' })
+    attachments!: Ref<Attachment>[];
+
+    @Field(_type => [TouristSite], { description: 'уристические точки (ресурсы)' })
+    @Property({ required: true, ref: 'TouristSite'})
+    sites!: Ref<TouristSite>[];
+
+    @Field(_type => Float, { description: 'Расстояние (в километрах, с точностью до 3 знаков)' })
+    @Property()
+    distance?: number;
+
+    @Field(_type => DurationScalar, { description: 'Длительность', nullable: true })
+    @Property({ type: DurationMongo })
+    duration?: Duration;
+
+    @Field(_type => Rating, { description: 'Рейтинг' })
+    @Property({ required: true })
+    rating!: Rating;
+
+    @Field(_type => Int, { description: 'Продаваемость' })
+    @Property() // TODO: Roles || Owner
+    marketability: number = 0;
+
+    @Field(_type => ResourceStatus, { description: 'Статус объекта (ресурса)' })
+    @Property({ enum: RequestStatus, type: String })
+    staus: ResourceStatus = ResourceStatus.WAITING;
+}
+
+@ObjectType({ description: 'Туристическое мероприятие (продукт)' })
+export class TouristEvent {
+    @Field()
+    readonly _id!: ObjectId;
+
+    @Field(_type => Developer, { description: 'Разработчик' })
+    @Property({ required: true, ref: 'Developer'})
+    developer!: Ref<Developer>;
+
+    @Field({ description: 'Наименование' })
+    @Property({ required: true })
+    name!: string;
+
+    @Field({ description: 'Описание', nullable: true })
+    @Property()
+    description?: string;
+
+    @Field(_type => Contact)
+    @Property({ required: true })
+    contact!: Contact;
+
+    @Field(_type => TouristRoute, { description: 'Туристический маршрут (ресурс)' })
+    @Property({ ref: 'TouristRoute' })
+    route!: Ref<TouristRoute>;
+
+    @Field(_type => Guide, { description: 'Экскурсовод' })
+    @Property({ ref: 'Guide' })
+    guide!: Ref<Guide>;
+
+    @Field(_type => WorkingHours, { description: 'Часы работы' })
+    @Property({ required: true })
+    wokringhours!: WorkingHours;
+
+    @Field(_type => WorkingDays, { description: 'Дата проведения' })
+    @Property({ required: true })
+    wokringdays!: WorkingDays;
+
+    @Field(_type => [Attachment], { description: 'Вложения' })
+    @Property({ required: true, ref: 'Attachment' })
+    attachments!: Ref<Attachment>[];
+
+    @Field(_type => [Comment], { description: 'Комментарии' })
+    @Property({ required: true, ref: 'Comment' })
+    comments!: Ref<Comment>[];
+
+    @Field(_type => Rating, { description: 'Рейтинг' })
+    @Property({ required: true })
+    rating!: Rating;
+}
+
+@ObjectType({ description: 'Ресурс запроса' })
+export class RequestAttachment {
+    @Field(_type => Int, { description: 'Версия ресурса запроса'})
+    @Property({ required: true })
+    version!: number;
+
+    @Field(_type => TouristResource, { description: 'Прикрепленный ресурс' })
+    @Property({ required: true })
+    resource!: typeof TouristResource;
+
+    @Field(_type => RequestResourceStatus, { description: 'Статус ресурса запроса' })
+    @Property({ enum: RequestResourceStatus })
+    status!: RequestResourceStatus;
+
+    @Field({ description: 'Замечания', nullable: true })
+    @Property()
+    remark?: string;
+}
+
+@ObjectType({ description: 'Запрос на добавление ресурса' })
+export class ResourceRequest {
+    @Field()
+    readonly _id!: ObjectId;
+
+    @Field(_type => [RequestAttachment], { description: 'История ресурса' })
+    @Property({ required: true, type: () => [RequestAttachment], default: [] })
+    resources!: mongoose.Types.Array<RequestAttachment>;
+
+    @Field(_type => RequestAttachment, { description: 'Текущая/последняя версия ресурса' })
+    @Property({ required: true })
+    resource!: RequestAttachment;
+}
+
+export const ResourceRequestModel = createModelFrom(ResourceRequest);

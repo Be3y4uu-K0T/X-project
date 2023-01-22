@@ -45,7 +45,7 @@ type AddressElement {           # Элемент адреса
     designation: String!        # Наименование/Номер
 }
 
-type Address {
+type Address {                  # Адрес
     country: Country!           # Страна (наименование)
     subject: String!            # Субъект (наименование)
     district: String!           # Городской округ (наименование)
@@ -56,7 +56,7 @@ type Address {
     apartament: Integer         # Номер квартири/офиса [доп.]
 }
 
-type GeoLocation {
+type GeoLocation {              # Геопозиция
     latitude: Float!            # Широта
     longitude: Float!           # Долгота
 }
@@ -86,14 +86,14 @@ interface User {                # Пользователь
 
 type Admin implements User {    # Администратор
     id: ID!
-    created_at: DateTime        # Дата и время создания пользователя
+    created_at: DateTime!
     contact: Contact!           # Контактные данные
     # Do need extra fields?
 }
 
 type Developer implements User {# Разработчик
     id: ID!
-    created_at: DateTime        # Дата и время создания пользователя
+    created_at: DateTime!
     contact: Contact!           # Контактные данные
     # Need extra?
     rating: Rating!             # Рейтинг
@@ -101,10 +101,11 @@ type Developer implements User {# Разработчик
 
 type Owner implements User {    # Владелец
     id: ID!
-    created_at: DateTime        # Дата и время создания пользователя
+    created_at: DateTime!
     lastname: String!           # Фамилия
     middlename: String!         # Отчество
     firstname: String!          # Имя
+    fullname: String!           # Полное ФИО
     contact: Contact!           # Контактные данные
     sites: [TouristSite!]!      # Туристические точки (ресурсы)
     routes: [TouristRoute!]!    # Туристические маршруты (продукты)
@@ -113,11 +114,12 @@ type Owner implements User {    # Владелец
 
 type Client implements User {   # Клиент
     id: ID!
-    created_at: DateTime        # Дата и время создания пользователя
+    created_at: DateTime!
     contact: Contact!           # Контактные данные
     lastname: String            # Фамилия
     middlename: String          # Отчество
     firstname: String           # Имя
+    fullname: String            # Полное ФИО
     birthday: Date              # Дата рождения
 }
 
@@ -126,6 +128,7 @@ type Guide implements User {    # Экскурсовод
     lastname: String!           # Фамилия
     middlename: String!         # Отчество
     firstname: String!          # Имя
+    fullname: String!           # Полное ФИО
     contact: Contact!           # Контактные данные
     rating: Rating!             # Рейтинг
 }
@@ -137,10 +140,11 @@ type Rating {                   # Рейтинг
 
 type Review {                   # Отзыв
     id: ID!
+    created_at: DateTime!
     score: Float!               # Оценка
     title: String               # Заголовок
     content: String             # Контент (отзыв)
-    author: User                # Автор
+    author: User!               # Автор отзыва
     timestamp: DateTime         # Дата и время
     attachments: [Attachment!]! # Вложения (фото, видео)
     usefulness: Usefulness!     # Оценка комментария (полезность)
@@ -154,18 +158,10 @@ type Usefulness {               # Оценка комментария (поле�
 
 type Comment {                  # Комментарий
     id: ID!
-    created_at: DateTime        # Дата и время создания
+    created_at: DateTime!
     author: User!               # Автор комментария
     content: String!            # Контент (комментарий)
-    reply: Reply                # Ответ авторов/владельцев/разработчиков/администрации ресурса
-    usefulness: Integer!        # Кол-во отметок "ПОЛЕЗНО"
-    edited_at: DateTime         # Временная метка "ИЗМЕНЕННО" (отредактировано)
-}
-
-type Reply {                    # Ответ
-    created_at: DateTime        # Дата и время создания
-    author: User!               # Автор ответа
-    content: String!            # Контент (Ответ)
+    reply: [Comment!]!          # Ответы (комментарие)
     usefulness: Integer!        # Кол-во отметок "ПОЛЕЗНО"
     edited_at: DateTime         # Временная метка "ИЗМЕНЕННО" (отредактировано)
 }
@@ -204,7 +200,7 @@ type TouristRoute {             # Туристический маршрут (р�
     wokringdays: WorkingDays    # Временный период (Дата проведения)    !DEPRECATED::reason:заменить?!
     sites: [TouristSite!]!      # Туристические точки (ресурсы)
     attachments: [Attachment!]! # Вложения (фото, видео)
-    distance: Float!            # Расстояние (в километрах, с точностью до 3 знаков)
+    distance: Float             # Расстояние (в километрах, с точностью до 3 знаков)
     duration: Duration          # Длительность
     rating: Rating!             # Рейтинг
     marketability: Integer!     # Продаваемость
@@ -214,7 +210,7 @@ type TouristRoute {             # Туристический маршрут (р�
 type TouristEvent {             # Туристическое мероприятие (продукт)
     id: ID!
     name: String!               # Наименование
-    developer: Developer!       # Туристическая фирма
+    developer: Developer!       # Разработчик
     route: TouristRoute!        # Туристический маршрут (ресурс)
     guide: Guide!               # Экскурсовод
     wokringhours: WorkingHours! # Часы работы
@@ -229,17 +225,17 @@ type TouristEvent {             # Туристическое мероприят�
 
 union TouristResource = TouristEvent | TouristRoute | TouristSite
 
-type Request {                  # Запрос
+type ResourceRequest {          # Запрос
     id: ID!
-    resources: [RequestResource!]!# История ресурса
-    resource: RequestResource!  # Текущая/последняя версия ресурса
+    resources: [RequestAttachment!]!# История ресурса
+    resource: RequestAttachment!# Текущая/последняя версия ресурса
     status: RequestStatus!      # Статус запроса
 }
 
-type RequestResource {          # Ресурс запроса
+type RequestAttachment {        # Ресурс запроса
     version: Integer!
-    status: RequestResourceStatus!# Статус ресурса запроса
     resource: TouristResource!  # Прикрепленный ресурс
+    status: RequestResourceStatus!# Статус ресурса запроса
     remark: String              # Замечания
 }
 
@@ -250,285 +246,6 @@ type Query {
 
 type Mutation {
 
-}
-
-schema {
-    query: Query
-    mutation: Mutation
-}
-
-
-##############################################################################
-#                           OLD
-##############################################################################
-
-enum Country { }
-
-scalar DateTime
-scalar Period
-scalar Time
-scalar Date
-
-scalar Passport
-scalar Phone
-scalar Email
-scalar Photo
-scalar Video
-
-type AddressElement {
-    type: String!
-    designation: String!
-}
-
-type Address {
-    country: Country!          # Страна (наименование)
-    subject: String!           # Субъект (наименование)
-    district: String!          # Городской округ (наименование)
-    locality: AddressElement!  # Населенный пункт (вид, наименование)
-    street: AddressElement!    # Элемент улично-дорожной сети (вид, наименование)
-    building: AddressElement!  # Здание/сооружение (тип, номер)
-    additional: AddressElement # Здание/сооружение [доп.] (тип, номер)
-    apartament: Integer        # Номер квартири/офиса [доп.]
-}
-
-type GeoLocation {
-    latitude: Float!
-    longitude: Float!
-}
-
-type Contact {
-    address: Address
-    phone: Phone
-    email: Email
-}
-
-union Attachment = Photo | Video
-
-type User {                     # Клиент
-    id: ID!
-    username: String!           # Имя пользователя
-    lastname: String            # Фамилия
-    middlename: String          # Отчество
-    firstname: String           # Имя
-    birthday: Date              # Дата рождения
-    contact: Contact!           # Контактные данные
-    cart: [TouristEvent!]!      # Корзина
-}
-
-input CreateUser {
-
-}
-
-type Usefulness {
-    like: Integer!
-    dislike: Integer!
-}
-
-type Review {                   # Отзыв
-    id: ID!
-    score: Float!               # Оценка
-    title: String               # Заголовок
-    description: String         # Описание (отзыв)
-    author: User                # Автор
-    timestamp: DateTime         # Дата и время
-    attachments: [Attachment!]! # Вложения (фото)
-    usefulness: Usefulness!     # Оценка комментария (полезность)
-}
-
-input CreateReview {}
-
-type WorkingHours {
-    opening: Time!
-    closing: Time!
-}
-
-type WorkingDays {
-    start: Date!
-    end: Date!
-}
-
-type PrivatePerson {            # Физ. лицо
-    id: ID!
-    lastname: String!           # Фамилия
-    middlename: String!         # Отчество
-    firstname: String!          # Имя
-    passport: Passport!         # Паспортные данные
-    address: Address!           # Адрес
-    contact: Contact!           # Контактные данные
-}
-
-input CreatePrivatePerson {
-    lastname: String!
-    middlename: String!
-    firstname: String!
-    passport: Passport!
-    address: Address!
-    contact: Contact!
-}
-
-type JuridicalPerson {          # Юр. лицо
-    id: ID!
-    name: String!               # Наименование
-    contact: Contact!           # Контактные данные
-}
-
-input CreateJuridicalPerson {
-    name: String!
-    address: Address!
-    contact: Contact!
-}
-
-union Owner = PrivatePerson | JuridicalPerson
-union Developer = Owner | TouristFirm # Разработчик (туристических ресурсов и продуктов)
-
-type TouristSite {              # Туристический ресурс
-    id: ID!
-    owner: Developer!           # Владелец (Разработчик)
-    name: String!               # Наименование
-    description: String         # Описание
-    location: GeoLocation!      # Геопозиция (для карты)
-    contact: Contact!           # Контактные данные
-    wokringhours: WorkingHours  # Часы работы
-    wokringdays: WorkingDays    # Временный период (Дата проведения)
-    duration: Period            # Длительность
-    reviews: [Review!]!         # Отзывы
-    score: Float                # Рейтинг
-}
-
-type CreateTouristSite {
-    owner: Developer!
-    name: String!
-    description: String
-    location: GeoLocation!
-    wokringhours: WorkingHours
-    wokringdays: WorkingDays
-    address: Address!
-    contact: Contact!
-    duration: Period
-}
-
-type Guide {                    # Экскурсовод
-    id: ID!
-    lastname: String!           # Фамилия
-    middlename: String!         # Отчество
-    firstname: String!          # Имя
-    passport: Passport!         # Паспортные данные
-    contact: Contact!           # Контактные данные
-    reviews: [Review!]!         # Отзывы
-    score: Float                # Рейтинг
-}
-
-type TouristFirm {              # Туристическая фирма
-    id: ID!
-    name: String!               # Наименование
-    owner: Developer!           # Владелец (Разработчик)
-    description: String         # Описание
-    routes: [TouristRoute!]!    # Маршруты (Туристические продукты)
-    guides: [Guide!]!           # Экскурсоводы
-    contact: Contact!           # Контактные данные
-    reviews: [Review!]!         # Отзывы
-    score: Float                # Рейтинг
-}
-
-input CreateTouristFirm {
-    owner: Developer!
-    name: String!
-    description: String
-    routes: [TouristRoute!]!
-    guides: [Guide!]!
-    address: Address!
-    contact: Contact!
-}
-
-type TouristRoute {             # Туристический маршрут
-    id: ID!
-    name: String!               # Наименование
-    description: String         # Описание
-    sites: [TouristSite!]!      # Туристические точки (ресурсы)
-    distance: Float!            # Расстояние (в метрах)
-    duration: Period            # Длительность
-    score: Float!               # Рейтинг
-    reviews: [Review!]!         # Отзывы
-}
-
-input CreateTouristRoute {
-    name: String!
-    description: String
-    sites: [TouristSite!]!
-    distance: Float!
-    duration: Period
-}
-
-type TouristEvent {             # Туристическое мероприятие (продукт)
-    id: ID!
-    name: String!               # Наименование
-    firm: TouristFirm           # Туристическая фирма
-    route: TouristRoute!        # Маршрут
-    guide: Guide!               # Экскурсовод
-    @deprecated(reason: "Заменить?")
-    wokringhours: WorkingHours! # Часы работы
-    @deprecated(reason: "Заменить?")
-    wokringdays: WorkingDays!   # Дата начала и окончания мероприятия
-    attachment: [Attachment!]!  # Вложения (материалы мероприятия)
-    score: Float!               # Рейтинг
-    reviews: [Review!]!         # Отзывы
-    price: Integer              # Цена
-    seats: Integer              # Количество свободных мест
-}
-
-input CreateTouristEvent {
-    route: TouristRoute!
-    guide: Guide!
-    wokringhours: WorkingHours!
-    wokringdays: WorkingDays!
-    attachment: Attachment
-    price: Integer
-    seats: Integer
-}
-
-input EditTouristEvent {
-    id: ID!
-    firm: TouristFirm
-    route: TouristRoute
-    guide: Guide
-    wokringhours: WorkingHours
-    wokringdays: WorkingDays
-    attachment: Attachment
-    score: Float
-    reviews: [Review!]
-    price: Integer
-    seats: Integer
-}
-
-type Query {
-    routes: [TouristRoute!]!
-    route(id: ID!): TouristRoute
-
-    sites: [TouristSite!]!
-    site(id: ID!): TouristSite
-
-    firms: [TouristFirm!]!
-    firm(id: ID!): TouristFirm
-
-    guides: [Guide!]!
-    guide(id: ID!): Guide
-
-    calendar
-}
-
-type Mutation {
-    createEvent(input: CreateTouristEvent!): TouristEvent
-    createRoute(input: CreateTouristRoute!): TouristRoute
-    createSite(input: CreateTouristSite!): TouristSite
-    createFirm(input: CreateTouristFirm!): TouristFirm
-    createGuide(input: CreatePrivatePerson!): Guide
-    createPrivatePerson(input: CreatePrivatePerson!): PrivatePerson
-    createJuridicalPerson(input: CreateJuridicalPerson!): JuridicalPerson
-
-    editEvent(input: EditTouristEvent): TouristEvent
-    editRoute(input: ): TouristRoute
-
-    deleteEvent(id: ID!): Boolean!
 }
 
 schema {
