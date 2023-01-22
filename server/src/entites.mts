@@ -636,54 +636,54 @@ registerEnumType(EventStatus, {
 
 /* TYPES */
 
-@ObjectType({ description: 'Вложение.' })
+@ObjectType({ description: 'Вложение' })
 export class Attachment {
     @Field()
     readonly _id!: ObjectId;
 
-    @Field({ description: 'Ссылка на вложение.' })
+    @Field({ description: 'Ссылка на вложение' })
     @Property({ required: true})
     url!: string;
 
-    @Field({ description: 'Имя файла вложения.', nullable: true })
+    @Field({ description: 'Имя файла вложения', nullable: true })
     @Property()
     filename?: string;
 
-    @Field({ description: 'Тип файла вложения.' })
+    @Field({ description: 'Тип файла вложения' })
     @Property({ required: true })
     mimetype!: string;
 
-    @Field({ description: 'Размер файла вложения.' })
+    @Field({ description: 'Размер файла вложения' })
     @Property({ required: true })
     size!: number;
 
     /* TODO:
-    @Field(_type => User, { description: 'Автор загрузки вложения.' })
+    @Field(_type => User, { description: 'Автор загрузки вложения' })
     @Property({ required: true, ref: 'User'})
     author: Ref<User>;
     */
 }
 
-@InputType({ description: 'Загружаемое вложение.' })
+@InputType({ description: 'Загружаемое вложение' })
 export class AttachmentInput {
-    @Field({ description: 'Ссылка на вложение.' })
+    @Field({ description: 'Ссылка на вложение' })
     @Length(1, 255)
     url!: string;
 
-    @Field({ description: 'Имя файла вложения.', nullable: true })
+    @Field({ description: 'Имя файла вложения', nullable: true })
     @Length(1, 32)
     filename?: string;
 
-    @Field({ description: 'Тип файла вложения.' })
+    @Field({ description: 'Тип файла вложения' })
     @MaxLength(64)
     mimetype!: string;
 
-    @Field(_type => Int, { description: 'Размер файла вложения.' })
+    @Field(_type => Int, { description: 'Размер файла вложения' })
     @IsInt()
     size!: number;
 
     /* TODO:
-    @Field(_type => User, { description: 'Автор загрузки вложения.' })
+    @Field(_type => User, { description: 'Автор загрузки вложения' })
     author: Ref<User>;
     */
 }
