@@ -702,7 +702,8 @@ export class AttachmentResolver {
     async addAttachment(
         @Arg('input', { validate: true }) input: AttachmentInput
     ) {
-        return await AttachmentModel.create(input);
+        const document = await AttachmentModel.create(input);
+        return await document.save();
     }
 }
 
