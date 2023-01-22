@@ -34,13 +34,13 @@ scalar Photo                    # Фото формат
 scalar Video                    # Видео формат
 union Attachment = Photo | Video# Вложение
 
-type Attachment {
+type Attachment {               # Вложение
     id: ID!
-    url: String!
-    filename: String
-    mimetype: String!
-    size: Integer!
-    author: User!
+    url: String!                # Ссылка на вложение
+    filename: String            # Имя файла вложения
+    mimetype: String!           # Тип файла вложения
+    size: Integer!              # Размер файла вложения
+    author: User!               # Автор загрузки вложения
 }
 
 type AddressElement {           # Элемент адреса

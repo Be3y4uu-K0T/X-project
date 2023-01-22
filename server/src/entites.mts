@@ -636,54 +636,54 @@ registerEnumType(EventStatus, {
 
 /* TYPES */
 
-@ObjectType()
+@ObjectType({ description: 'Вложение.' })
 export class Attachment {
     @Field()
     readonly _id: ObjectId;
 
-    @Field()
+    @Field({ description: 'Ссылка на вложение.' })
     @Property({ required: true})
     url: string;
 
-    @Field({ nullable: true })
+    @Field({ description: 'Имя файла вложения.', nullable: true })
     @Property()
     filename?: string;
 
-    @Field({ nullable: true })
-    @Property()
-    mimetype?: string;
+    @Field({ description: 'Тип файла вложения.' })
+    @Property({ required: true })
+    mimetype: string;
 
-    @Field()
+    @Field({ description: 'Размер файла вложения.' })
     @Property({ required: true })
     size: number;
 
     /* TODO:
-    @Field(_type => User)
+    @Field(_type => User, { description: 'Автор загрузки вложения.' })
     @Property({ required: true, ref: 'User'})
     author: Ref<User>;
     */
 }
 
-@InputType()
+@InputType({ description: 'Загружаемое вложение.' })
 export class AttachmentInput {
-    @Field()
+    @Field({ description: 'Ссылка на вложение.' })
     @Length(1, 255)
     url: string;
 
-    @Field({ nullable: true })
+    @Field({ description: 'Имя файла вложения.', nullable: true })
     @Length(1, 32)
     filename?: string;
 
-    @Field()
+    @Field({ description: 'Тип файла вложения.' })
     @MaxLength(64)
     mimetype: string;
 
-    @Field(_type => Int)
+    @Field(_type => Int, { description: 'Размер файла вложения.' })
     @IsInt()
     size: number;
 
     /* TODO:
-    @Field(_type => User)
+    @Field(_type => User, { description: 'Автор загрузки вложения.' })
     author: Ref<User>;
     */
 }
