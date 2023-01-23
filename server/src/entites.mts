@@ -1,700 +1,61 @@
-import { prop as Property, getModelForClass as createModelFrom } from '@typegoose/typegoose';
-import { GraphQLScalarType, ValueNode, Kind, GraphQLError } from 'graphql';
-import { ScalarsTypeMap } from 'type-graphql/dist/schema/build-context';
 import type { Ref, DocumentType } from '@typegoose/typegoose';
-import { DateTime, Interval, Duration } from 'luxon';
-import { ObjectId } from 'mongodb';
+import { IsInt, Length, MaxLength } from 'class-validator';
 import mongoose from 'mongoose';
+
 import {
-    registerEnumType,
-    createUnionType,
+    prop as Property,
+    getModelForClass,
+    getDiscriminatorModelForClass,
+} from '@typegoose/typegoose';
+
+import {
+    InterfaceType,
     FieldResolver,
-    buildSchema,
     ObjectType,
     InputType,
     Mutation,
     Resolver,
     Query,
     Field,
+    Float,
     Root,
+    Args,
     Arg,
+    Int,
     Ctx,
     ID,
-    Args,
-    Int,
-    InterfaceType,
-    Float
 } from 'type-graphql';
-import { IsInt, Length, MaxLength } from 'class-validator';
 
-/* SCALARS */
+import {
+    EmailAddressScalar,
+    PhoneNumberScalar,
+    LongitudeScalar,
+    LatitudeScalar,
+    DateTimeScalar,
+    DurationScalar,
+    IntervalScalar,
+    ObjectIdScalar,
+    DateScalar,
+    TimeScalar,
+    URLScalar,
+    DateTime,
+    Duration,
+    Interval,
+    ObjectId,
+} from './scalars/scalars.mjs';
 
-export const ObjectIdScalar = new GraphQLScalarType({
-    name: 'ObjectId',
-    description: 'Mongodb object id scalar type',
-    serialize(value: unknown): string {
-        if (value instanceof ObjectId)
-            return value.toHexString();
-        throw new GraphQLError(`Value is not a valid mongodb ObjectId: ${value}`);
-    },
-    parseValue(value: unknown): ObjectId {
-        if (typeof value === 'string')
-            return new ObjectId(value);
-        throw new GraphQLError(`Value is not a valid mongodb ObjectId: ${value}`);
-    },
-    parseLiteral(ast: ValueNode): ObjectId {
-        if (ast.kind === Kind.STRING)
-            return new ObjectId(ast.value);
-        throw new GraphQLError(`Can only validate strings as ObjectId but got a: ${ast.kind}`, { nodes: ast });
-    },
-});
+import {
+    ResourceStatus,
+    RequestStatus,
+    EventStatus,
+    UserType,
+    Country,
+} from './enums/enums.mjs';
 
-export const DateTimeScalar = new GraphQLScalarType({
-    name: 'DateTime',
-    description: 'An ISO-8601 encoded datetime string.',
-    serialize(value: unknown): string {
-        if (value instanceof DateTime)
-            return value.toISO();
-        throw new GraphQLError(`Value is not a valid DateTime: ${value}`);
-    },
-    parseValue(value: unknown): DateTime {
-        if (typeof value === 'string')
-            return DateTime.fromISO(value);
-        throw new GraphQLError(`Value is not a valid string for DateTime: ${value}`);
-    },
-    parseLiteral(ast: ValueNode): DateTime {
-        if (ast.kind === Kind.STRING)
-            return DateTime.fromISO(ast.value);
-        throw new GraphQLError(`Can only validate strings as DateTime but got a: ${ast.kind}`, { nodes: ast });
-    },
-});
+import {
+    TouristResource,
+} from './unions/unions.mjs';
 
-export class DateTimeMongo extends mongoose.SchemaType {
-    constructor(key: string, options: any) {
-        super(key, options, 'DateTime');
-    }
-
-    public cast(value: unknown) {
-        if (typeof value === 'string')
-            return DateTime.fromISO(value);
-        throw new Error(`Value is not a valid string for DateTime: ${value}`);
-    }
-}
-(mongoose.Schema.Types as any).DateTime = DateTimeMongo;
-
-export const DateScalar = new GraphQLScalarType({
-    name: 'Date',
-    description: 'An ISO-8601 encoded date string.',
-    serialize(value: unknown): string {
-        if (value instanceof DateTime)
-            return value.toISODate();
-        throw new GraphQLError(`Value is not a valid DateTime for Date: ${value}`);
-    },
-    parseValue(value: unknown): DateTime {
-        if (typeof value === 'string')
-            return DateTime.fromISO(value);
-        throw new GraphQLError(`Value is not a valid string for Date: ${value}`);
-    },
-    parseLiteral(ast: ValueNode): DateTime {
-        if (ast.kind === Kind.STRING)
-            return DateTime.fromISO(ast.value);
-        throw new GraphQLError(`Can only validate strings as Date but got a: ${ast.kind}`, { nodes: ast });
-    },
-});
-
-export const TimeScalar = new GraphQLScalarType({
-    name: 'Time',
-    description: 'An ISO-8601 encoded time string.',
-    serialize(value: unknown): string {
-        if (value instanceof DateTime)
-            return value.toISOTime();
-        throw new GraphQLError(`Value is not a valid DateTime for Time: ${value}`);
-    },
-    parseValue(value: unknown): DateTime {
-        if (typeof value === 'string')
-            return DateTime.fromISO(value);
-        throw new GraphQLError(`Value is not a valid string for Time: ${value}`);
-    },
-    parseLiteral(ast: ValueNode): DateTime {
-        if (ast.kind === Kind.STRING)
-            return DateTime.fromISO(ast.value);
-        throw new GraphQLError(`Can only validate strings as Time but got a: ${ast.kind}`, { nodes: ast });
-    },
-});
-
-export const IntervalScalar = new GraphQLScalarType({
-    name: 'Interval',
-    description: 'An ISO 8601 encoded interval string.',
-    serialize(value: unknown): string {
-        if (value instanceof Interval)
-            return value.toISO();
-        throw new GraphQLError(`Value is not a valid Interval: ${value}`);
-    },
-    parseValue(value: unknown): Interval {
-        if (typeof value === 'string')
-            return Interval.fromISO(value);
-        throw new GraphQLError(`Value is not a valid string for Interval: ${value}`);
-    },
-    parseLiteral(ast: ValueNode): Interval {
-        if (ast.kind === Kind.STRING)
-            return Interval.fromISO(ast.value);
-        throw new GraphQLError(`Can only validate strings as Interval but got a: ${ast.kind}`, { nodes: ast });
-    },
-});
-
-export class IntervalMongo extends mongoose.SchemaType {
-    constructor(key: string, options: any) {
-        super(key, options, 'Interval');
-    }
-
-    public cast(value: unknown) {
-        if (typeof value === 'string')
-            return Interval.fromISO(value);
-        throw new Error(`Value is not a valid string for Interval: ${value}`);
-    }
-}
-(mongoose.Schema.Types as any).Interval = IntervalMongo;
-
-export const DurationScalar = new GraphQLScalarType({
-    name: 'Duration',
-    description: 'An ISO 8601 encoded duration string.',
-    serialize(value: unknown): string {
-        if (value instanceof Duration)
-            return value.toISO();
-        throw new GraphQLError(`Value is not a valid Duration: ${value}`);
-    },
-    parseValue(value: unknown): Duration {
-        if (typeof value === 'string')
-            return Duration.fromISO(value);
-        throw new GraphQLError(`Value is not a valid string for Duration: ${value}`);
-    },
-    parseLiteral(ast: ValueNode): Duration {
-        if (ast.kind === Kind.STRING)
-            return Duration.fromISO(ast.value);
-        throw new GraphQLError(`Can only validate strings as Duration but got a: ${ast.kind}`, { nodes: ast });
-    },
-});
-
-export class DurationMongo extends mongoose.SchemaType {
-    constructor(key: string, options: any) {
-        super(key, options, 'Duration');
-    }
-
-    public cast(value: unknown) {
-        if (typeof value === 'string')
-            return Duration.fromISO(value);
-        throw new Error(`Value is not a valid string for Duration: ${value}`);
-    }
-}
-(mongoose.Schema.Types as any).Duration = DurationMongo;
-
-export const TimestampScalar = new GraphQLScalarType({
-    name: 'Timestamp',
-    description: 'Integer of milliseconds from start of UNIX epoch.',
-    serialize(value: unknown): number {
-        if (value instanceof DateTime)
-            return value.valueOf();
-        throw new GraphQLError(`Value is not a valid DateTime: ${value}`);
-    },
-    parseValue(value: unknown): DateTime {
-        if (typeof value === 'string')
-            value = Number.parseInt(value, 10);
-        if (typeof value === 'number')
-            return DateTime.fromMillis(value);
-        throw new GraphQLError(`Value is not a valid string or number for DateTime: ${value}`);
-    },
-    parseLiteral(ast: ValueNode): DateTime {
-        if (ast.kind === Kind.INT)
-            return DateTime.fromMillis(Number.parseInt(ast.value, 10));
-        throw new GraphQLError(`Can only validate integers as Duration but got a: ${ast.kind}`, { nodes: ast });
-    },
-});
-
-export class TimestampMongo extends mongoose.SchemaType {
-    constructor(key: string, options: any) {
-        super(key, options, 'Timestamp');
-    }
-
-    public cast(value: unknown) {
-        if (typeof value === 'string')
-            value = Number.parseInt(value, 10);
-        if (typeof value === 'number')
-            return DateTime.fromMillis(value);
-        throw new Error(`Value is not a valid string or number for DateTime: ${value}`);
-    }
-}
-(mongoose.Schema.Types as any).Timestamp = TimestampMongo;
-
-const EMAIL_ADDRESS_REGEXP = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-
-export const EmailScalar = new GraphQLScalarType({
-    name: 'Email',
-    description: 'A RFC 1123 encoded email address string.',
-    serialize(value: unknown): string {
-        if (typeof value === 'string' && EMAIL_ADDRESS_REGEXP.test(value))
-            return value;
-        throw new GraphQLError(`Value is not a valid email address: ${value}`);
-    },
-    parseValue(value: unknown): string {
-        if (typeof value === 'string' && EMAIL_ADDRESS_REGEXP.test(value))
-            return value;
-        throw new GraphQLError(`Value is not a valid email address: ${value}`);
-    },
-    parseLiteral(ast: ValueNode): string {
-        if (ast.kind === Kind.STRING && EMAIL_ADDRESS_REGEXP.test(ast.value))
-            return ast.value;
-        throw new GraphQLError(`Can only validate strings as email addresses but got a: ${ast.kind}`, { nodes: ast });
-    },
-});
-
-const PHONE_NUMBER_REGEX = /^\+[1-9]\d{6,14}$/;
-
-export const PhoneNumberScalar = new GraphQLScalarType({
-    name: 'PhoneNumber',
-    description: 'A phone number of standard E.164 (example:: +17895551234).',
-    serialize(value: unknown): string {
-        if (typeof value === 'string' && PHONE_NUMBER_REGEX.test(value))
-            return value;
-        throw new GraphQLError(`Value is not a valid phone number: ${value}`);
-    },
-    parseValue(value: unknown): string {
-        if (typeof value === 'string' && PHONE_NUMBER_REGEX.test(value))
-            return value;
-        throw new GraphQLError(`Value is not a valid phone number: ${value}`);
-    },
-    parseLiteral(ast: ValueNode): string {
-        if (ast.kind === Kind.STRING && PHONE_NUMBER_REGEX.test(ast.value))
-            return ast.value;
-        throw new GraphQLError(`Can only validate strings as phone numberes but got a: ${ast.kind}`, { nodes: ast });
-    },
-});
-
-// See https://en.wikipedia.org/wiki/Decimal_degrees#Precision
-const MAX_PRECISION = 8;
-
-// Minimum latitude
-const MIN_LATITUDE = -90.0;
-// Maximum latitude
-const MAX_LATITUDE = +90.0;
-
-export const LatitudeScalar = new GraphQLScalarType({
-    name: 'Latitude',
-    description: 'A decimal degrees latitude number.',
-    serialize(value: unknown): string {
-        if (typeof value === 'string')
-            value = Number.parseFloat(value);
-        if (typeof value === 'number' && !Number.isNaN(value)) {
-            if (value >= MIN_LATITUDE && value <= MAX_LATITUDE)
-                return value.toFixed(MAX_PRECISION);
-            throw new GraphQLError(`Value must be between ${MIN_LATITUDE} and ${MAX_LATITUDE}: ${value}`);
-        }
-        throw new GraphQLError(`Value is not a valid latitude: ${value}`);
-    },
-    parseValue(value: unknown): number {
-        if (typeof value === 'string')
-            value = Number.parseFloat(value);
-        if (typeof value === 'number' && !Number.isNaN(value)) {
-            if (value >= MIN_LATITUDE && value <= MAX_LATITUDE)
-                return value;
-            throw new GraphQLError(`Value must be between ${MIN_LATITUDE} and ${MAX_LATITUDE}: ${value}`);
-        }
-        throw new GraphQLError(`Value is not a valid latitude: ${value}`);
-    },
-    parseLiteral(ast: ValueNode): number {
-        if (ast.kind === Kind.STRING || ast.kind === Kind.FLOAT) {
-            let value = Number.parseFloat(ast.value);
-            if (value >= MIN_LATITUDE && value <= MAX_LATITUDE)
-                return value;
-            throw new GraphQLError(`Value must be between ${MIN_LATITUDE} and ${MAX_LATITUDE}: ${value}`);
-        }
-        throw new GraphQLError(`Can only validate strings or numbers as latitude but got a: ${ast.kind}`, { nodes: ast });
-    },
-});
-
-// Minimum longitude
-const MIN_LONGITUDE = -180.0;
-// Maximum longitude
-const MAX_LONGITUDE = +180.0;
-
-export const LongitudeScalar = new GraphQLScalarType({
-    name: 'Longitude',
-    description: 'A decimal degrees latitude number.',
-    serialize(value: unknown): string {
-        if (typeof value === 'string')
-            value = Number.parseFloat(value);
-        if (typeof value === 'number' && !Number.isNaN(value)) {
-            if (value >= MIN_LONGITUDE && value <= MAX_LONGITUDE)
-                return value.toFixed(MAX_PRECISION);
-            throw new GraphQLError(`Value must be between ${MIN_LONGITUDE} and ${MAX_LONGITUDE}: ${value}`);
-        }
-        throw new GraphQLError(`Value is not a valid longitude: ${value}`);
-    },
-    parseValue(value: unknown): number {
-        if (typeof value === 'string')
-            value = Number.parseFloat(value);
-        if (typeof value === 'number' && !Number.isNaN(value)) {
-            if (value >= MIN_LONGITUDE && value <= MAX_LONGITUDE)
-                return value;
-            throw new GraphQLError(`Value must be between ${MIN_LONGITUDE} and ${MAX_LONGITUDE}: ${value}`);
-        }
-        throw new GraphQLError(`Value is not a valid longitude: ${value}`);
-    },
-    parseLiteral(ast: ValueNode): number {
-        if (ast.kind === Kind.STRING || ast.kind === Kind.FLOAT) {
-            let value = Number.parseFloat(ast.value);
-            if (value >= MIN_LONGITUDE && value <= MAX_LONGITUDE)
-                return value;
-            throw new GraphQLError(`Value must be between ${MIN_LONGITUDE} and ${MAX_LONGITUDE}: ${value}`);
-        }
-        throw new GraphQLError(`Can only validate strings or numbers as longitude but got a: ${ast.kind}`, { nodes: ast });
-    },
-});
-
-export const scalarsMap: ScalarsTypeMap[] = [
-    { type: ObjectId, scalar: ObjectIdScalar    },
-    { type: DateTime, scalar: DateTimeScalar    },
-    { type: DateTime, scalar: DateScalar        },
-    { type: DateTime, scalar: TimeScalar        },
-    { type: Interval, scalar: IntervalScalar    },
-    { type: Duration, scalar: DurationScalar    },
-    { type: Number,   scalar: TimestampScalar   },
-    { type: String,   scalar: EmailScalar       },
-    { type: String,   scalar: PhoneNumberScalar },
-    { type: Number,   scalar: LatitudeScalar    },
-    { type: Number,   scalar: LongitudeScalar   },
-];
-
-/* ENUMS */
-
-export enum Country {
-    Afghanistan                     = 'AF',
-    AlandIslands                    = 'AX',
-    Albania                         = 'AL',
-    Algeria                         = 'DZ',
-    AmericanSamoa                   = 'AS',
-    Andorra                         = 'AD',
-    Angola                          = 'AO',
-    Anguilla                        = 'AI',
-    Antarctica                      = 'AQ',
-    AntiguaAndBarbuda               = 'AG',
-    Argentina                       = 'AR',
-    Armenia                         = 'AM',
-    Aruba                           = 'AW',
-    Australia                       = 'AU',
-    Austria                         = 'AT',
-    Azerbaijan                      = 'AZ',
-    Bahamas                         = 'BS',
-    Bahrain                         = 'BH',
-    Bangladesh                      = 'BD',
-    Barbados                        = 'BB',
-    Belarus                         = 'BY',
-    Belgium                         = 'BE',
-    Belize                          = 'BZ',
-    Benin                           = 'BJ',
-    Bermuda                         = 'BM',
-    Bhutan                          = 'BT',
-    Bolivia                         = 'BO',
-    BonaireSintEustatiusSaba        = 'BQ',
-    BosniaAndHerzegovina            = 'BA',
-    Botswana                        = 'BW',
-    BouvetIsland                    = 'BV',
-    Brazil                          = 'BR',
-    BritishIndianOceanTerritory     = 'IO',
-    BruneiDarussalam                = 'BN',
-    Bulgaria                        = 'BG',
-    BurkinaFaso                     = 'BF',
-    Burundi                         = 'BI',
-    Cambodia                        = 'KH',
-    Cameroon                        = 'CM',
-    Canada                          = 'CA',
-    CapeVerde                       = 'CV',
-    CaymanIslands                   = 'KY',
-    CentralAfricanRepublic          = 'CF',
-    Chad                            = 'TD',
-    Chile                           = 'CL',
-    China                           = 'CN',
-    ChristmasIsland                 = 'CX',
-    CocosKeelingIslands             = 'CC',
-    Colombia                        = 'CO',
-    Comoros                         = 'KM',
-    Congo                           = 'CG',
-    CongoDemocraticRepublic         = 'CD',
-    CookIslands                     = 'CK',
-    CostaRica                       = 'CR',
-    CoteDIvoire                     = 'CI',
-    Croatia                         = 'HR',
-    Cuba                            = 'CU',
-    Curacao                         = 'CW',
-    Cyprus                          = 'CY',
-    CzechRepublic                   = 'CZ',
-    Denmark                         = 'DK',
-    Djibouti                        = 'DJ',
-    Dominica                        = 'DM',
-    DominicanRepublic               = 'DO',
-    Ecuador                         = 'EC',
-    Egypt                           = 'EG',
-    ElSalvador                      = 'SV',
-    EquatorialGuinea                = 'GQ',
-    Eritrea                         = 'ER',
-    Estonia                         = 'EE',
-    Ethiopia                        = 'ET',
-    FalklandIslands                 = 'FK',
-    FaroeIslands                    = 'FO',
-    Fiji                            = 'FJ',
-    Finland                         = 'FI',
-    France                          = 'FR',
-    FrenchGuiana                    = 'GF',
-    FrenchPolynesia                 = 'PF',
-    FrenchSouthernTerritories       = 'TF',
-    Gabon                           = 'GA',
-    Gambia                          = 'GM',
-    Georgia                         = 'GE',
-    Germany                         = 'DE',
-    Ghana                           = 'GH',
-    Gibraltar                       = 'GI',
-    Greece                          = 'GR',
-    Greenland                       = 'GL',
-    Grenada                         = 'GD',
-    Guadeloupe                      = 'GP',
-    Guam                            = 'GU',
-    Guatemala                       = 'GT',
-    Guernsey                        = 'GG',
-    Guinea                          = 'GN',
-    GuineaBissau                    = 'GW',
-    Guyana                          = 'GY',
-    Haiti                           = 'HT',
-    HeardIslandMcdonaldIslands      = 'HM',
-    HolySeeVaticanCityState         = 'VA',
-    Honduras                        = 'HN',
-    HongKong                        = 'HK',
-    Hungary                         = 'HU',
-    Iceland                         = 'IS',
-    India                           = 'IN',
-    Indonesia                       = 'ID',
-    Iran                            = 'IR',
-    Iraq                            = 'IQ',
-    Ireland                         = 'IE',
-    IsleOfMan                       = 'IM',
-    Israel                          = 'IL',
-    Italy                           = 'IT',
-    Jamaica                         = 'JM',
-    Japan                           = 'JP',
-    Jersey                          = 'JE',
-    Jordan                          = 'JO',
-    Kazakhstan                      = 'KZ',
-    Kenya                           = 'KE',
-    Kiribati                        = 'KI',
-    Korea                           = 'KR',
-    KoreaDemocraticPeoplesRepublic  = 'KP',
-    Kuwait                          = 'KW',
-    Kyrgyzstan                      = 'KG',
-    LaoPeoplesDemocraticRepublic    = 'LA',
-    Latvia                          = 'LV',
-    Lebanon                         = 'LB',
-    Lesotho                         = 'LS',
-    Liberia                         = 'LR',
-    LibyanArabJamahiriya            = 'LY',
-    Liechtenstein                   = 'LI',
-    Lithuania                       = 'LT',
-    Luxembourg                      = 'LU',
-    Macao                           = 'MO',
-    Macedonia                       = 'MK',
-    Madagascar                      = 'MG',
-    Malawi                          = 'MW',
-    Malaysia                        = 'MY',
-    Maldives                        = 'MV',
-    Mali                            = 'ML',
-    Malta                           = 'MT',
-    MarshallIslands                 = 'MH',
-    Martinique                      = 'MQ',
-    Mauritania                      = 'MR',
-    Mauritius                       = 'MU',
-    Mayotte                         = 'YT',
-    Mexico                          = 'MX',
-    Micronesia                      = 'FM',
-    Moldova                         = 'MD',
-    Monaco                          = 'MC',
-    Mongolia                        = 'MN',
-    Montenegro                      = 'ME',
-    Montserrat                      = 'MS',
-    Morocco                         = 'MA',
-    Mozambique                      = 'MZ',
-    Myanmar                         = 'MM',
-    Namibia                         = 'NA',
-    Nauru                           = 'NR',
-    Nepal                           = 'NP',
-    Netherlands                     = 'NL',
-    NewCaledonia                    = 'NC',
-    NewZealand                      = 'NZ',
-    Nicaragua                       = 'NI',
-    Niger                           = 'NE',
-    Nigeria                         = 'NG',
-    Niue                            = 'NU',
-    NorfolkIsland                   = 'NF',
-    NorthernMarianaIslands          = 'MP',
-    Norway                          = 'NO',
-    Oman                            = 'OM',
-    Pakistan                        = 'PK',
-    Palau                           = 'PW',
-    PalestinianTerritory            = 'PS',
-    Panama                          = 'PA',
-    PapuaNewGuinea                  = 'PG',
-    Paraguay                        = 'PY',
-    Peru                            = 'PE',
-    Philippines                     = 'PH',
-    Pitcairn                        = 'PN',
-    Poland                          = 'PL',
-    Portugal                        = 'PT',
-    PuertoRico                      = 'PR',
-    Qatar                           = 'QA',
-    Reunion                         = 'RE',
-    Romania                         = 'RO',
-    RussianFederation               = 'RU',
-    Rwanda                          = 'RW',
-    SaintBarthelemy                 = 'BL',
-    SaintHelena                     = 'SH',
-    SaintKittsAndNevis              = 'KN',
-    SaintLucia                      = 'LC',
-    SaintMartin                     = 'MF',
-    SaintPierreAndMiquelon          = 'PM',
-    SaintVincentAndGrenadines       = 'VC',
-    Samoa                           = 'WS',
-    SanMarino                       = 'SM',
-    SaoTomeAndPrincipe              = 'ST',
-    SaudiArabia                     = 'SA',
-    Senegal                         = 'SN',
-    Serbia                          = 'RS',
-    Seychelles                      = 'SC',
-    SierraLeone                     = 'SL',
-    Singapore                       = 'SG',
-    SintMaarten                     = 'SX',
-    Slovakia                        = 'SK',
-    Slovenia                        = 'SI',
-    SolomonIslands                  = 'SB',
-    Somalia                         = 'SO',
-    SouthAfrica                     = 'ZA',
-    SouthGeorgiaAndSandwichIsl      = 'GS',
-    SouthSudan                      = 'SS',
-    Spain                           = 'ES',
-    SriLanka                        = 'LK',
-    Sudan                           = 'SD',
-    Suriname                        = 'SR',
-    SvalbardAndJanMayen             = 'SJ',
-    Swaziland                       = 'SZ',
-    Sweden                          = 'SE',
-    Switzerland                     = 'CH',
-    SyrianArabRepublic              = 'SY',
-    Taiwan                          = 'TW',
-    Tajikistan                      = 'TJ',
-    Tanzania                        = 'TZ',
-    Thailand                        = 'TH',
-    TimorLeste                      = 'TL',
-    Togo                            = 'TG',
-    Tokelau                         = 'TK',
-    Tonga                           = 'TO',
-    TrinidadAndTobago               = 'TT',
-    Tunisia                         = 'TN',
-    Turkey                          = 'TR',
-    Turkmenistan                    = 'TM',
-    TurksAndCaicosIslands           = 'TC',
-    Tuvalu                          = 'TV',
-    Uganda                          = 'UG',
-    Ukraine                         = 'UA',
-    UnitedArabEmirates              = 'AE',
-    UnitedKingdom                   = 'GB',
-    UnitedStates                    = 'US',
-    UnitedStatesOutlyingIslands     = 'UM',
-    Uruguay                         = 'UY',
-    Uzbekistan                      = 'UZ',
-    Vanuatu                         = 'VU',
-    Venezuela                       = 'VE',
-    Vietnam                         = 'VN',
-    VirginIslandsBritish            = 'VG',
-    VirginIslandsUS                 = 'VI',
-    WallisAndFutuna                 = 'WF',
-    WesternSahara                   = 'EH',
-    Yemen                           = 'YE',
-    Zambia                          = 'ZM',
-    Zimbabwe                        = 'ZW',
-}
-
-registerEnumType(Country, {
-    name: 'Country',
-    description: 'An ISO 3166 Country regional code.',
-});
-
-export enum RequestStatus {
-    WAITING,
-    REVISION,
-    ACCEPTED,
-}
-
-registerEnumType(RequestStatus, {
-    name: 'RequestStatus',
-    description: 'Статус запроса на добавление текущий версии тур. продукта',
-    valuesConfig: {
-        WAITING: { description: 'ОЖИДАНИЕ' },
-        REVISION: { description: 'ОТПРАВЛЕНО НА ДОРАБОТКУ' },
-        ACCEPTED: { description: 'ПРИНЯТО' },
-    },
-});
-
-export enum RequestResourceStatus {
-    WAITING,
-    REJECTED,
-    ACCEPTED,
-}
-
-registerEnumType(RequestResourceStatus, {
-    name: 'RequestResourceStatus',
-    description: 'Статус запроса на добавление тур. продукта',
-    valuesConfig: {
-        WAITING: { description: 'ОЖИДАНИЕ' },
-        REJECTED: { description: 'ОТКЛОНЕНО' },
-        ACCEPTED: { description: 'ПРИНЯТО' },
-    },
-});
-
-export enum ResourceStatus {
-    WAITING,
-    ACTIVE,
-    INACTIVE,
-}
-
-registerEnumType(ResourceStatus, {
-    name: 'ResourceStatus',
-    description: 'Статус объекта (ресурса)',
-    valuesConfig: {
-        WAITING: { description: 'ОЖИДАНИЕ' },
-        ACTIVE: { description: 'АКТИВНО' },
-        INACTIVE: { description: 'НЕАКТИВНО' },
-    },
-});
-
-export enum EventStatus {
-    SCHEDULED,
-    CANCELLED,
-    CONDUCTED,
-}
-
-registerEnumType(EventStatus, {
-    name: 'EventStatus',
-    description: 'Статус мероприятия',
-    valuesConfig: {
-        SCHEDULED: { description: 'ЗАПЛАНИРОВАНО' },
-        CANCELLED: { description: 'ОТМЕНЕНО' },
-        CONDUCTED: { description: 'ПРОВЕДЕНО' },
-    },
-});
-
-/* UNIONS */
-
-const TouristResource = createUnionType({
-    name: 'TouristResource',
-    types: () => [TouristEvent, TouristRoute, TouristSite] as const
-});
-
-/* TYPES */
 
 @ObjectType({ description: 'Вложение' })
 export class Attachment {
@@ -726,9 +87,8 @@ export class Attachment {
 
 @InputType({ description: 'Загружаемое вложение' })
 export class AttachmentInput {
-    @Field({ description: 'Ссылка на вложение' })
-    @Length(1, 255)
-    url!: string;
+    @Field(_type => URLScalar, { description: 'Ссылка на вложение' })
+    url!: URL;
 
     @Field({ description: 'Имя файла вложения', nullable: true })
     @Length(1, 32)
@@ -748,7 +108,6 @@ export class AttachmentInput {
     */
 }
 
-
 @Resolver(_of => Attachment)
 export class AttachmentResolver {
     @Query(_returns => Attachment, { nullable: true })
@@ -767,8 +126,7 @@ export class AttachmentResolver {
     }
 }
 
-export const AttachmentModel = createModelFrom(Attachment);
-
+export const AttachmentModel = getModelForClass(Attachment);
 
 @ObjectType({ description: 'Элемент адреса' })
 export class AddressElement {
@@ -847,9 +205,20 @@ export class Contact {
     @Property()
     phone!: string;
 
-    @Field(_type => EmailScalar, { description: 'Адрес электронной почты', nullable: true })
+    @Field(_type => EmailAddressScalar, { description: 'Адрес электронной почты', nullable: true })
     @Property()
     email!: string;
+}
+
+@ObjectType({ description: 'Рейтинг' })
+export class Rating {
+    @Field(_type => [Review], { description: 'Отзывы' })
+    @Property({ ref: 'Review' })
+    reviews!: Ref<Review>[];
+
+    @Field(_type => Float, { description: 'Оценка' })
+    @Property({ required: true })
+    score!: number;
 }
 
 /*
@@ -863,12 +232,12 @@ export class Contact {
 */
 
 @InterfaceType({ description: 'Пользователь' })
-export abstract class User {
+export class User {
     @Field()
     readonly _id!: ObjectId;
 
     @Field(_type => DateTimeScalar)
-    @Property({ required: true, type: DateTimeMongo })
+    @Property({ required: true, type: mongoose.Schema.Types.DateTimeScalar })
     created_at!: DateTime;
 
     @Field(_type => Contact)
@@ -876,10 +245,24 @@ export abstract class User {
     contact!: Contact;
 }
 
+@Resolver(_of => User)
+export class UserResover {
+    @Query(_returns => User, { nullable: true })
+    async user(
+        @Arg('id', _type => ObjectIdScalar) id: ObjectId
+    ) {
+        return await UserModel.findById(id);
+    }
+}
+
+export const UserModel = getModelForClass(User);
+
 @ObjectType({ description: 'Администратор', implements: User })
 export class Admin extends User {
     /* TODO: Do need extra fields? */
 }
+
+export const AdminModel = getDiscriminatorModelForClass(UserModel, Admin, UserType.Admin);
 
 @ObjectType({ description: 'Разработчик', implements: User })
 export class Developer extends User {
@@ -887,6 +270,8 @@ export class Developer extends User {
     @Property({ required: true })
     rating!: Rating;
 }
+
+export const DeveloperModel = getDiscriminatorModelForClass(UserModel, Developer, UserType.Developer);
 
 @ObjectType({ description: 'Владелец', implements: User })
 export class Owner extends User {
@@ -921,6 +306,9 @@ export class Owner extends User {
     rating!: Rating;
 }
 
+export const OwnerModel = getDiscriminatorModelForClass(UserModel, Owner, UserType.Owner);
+
+
 @ObjectType({ description: 'Клиент', implements: User })
 export class Client extends User {
     @Field({ description: 'Фамилия', nullable: true })
@@ -943,9 +331,12 @@ export class Client extends User {
     public fullname?: string;
 
     @Field(_type => DateScalar, { description: 'Дата рождения', nullable: true })
-    @Property({ type: DateTimeMongo })
+    @Property({ type: mongoose.Schema.Types.DateTimeScalar })
     birthday?: DateTime;
 }
+
+export const ClientModel = getDiscriminatorModelForClass(UserModel, Client, UserType.Client);
+
 
 @ObjectType({ description: 'Экскурсовод', implements: User })
 export class Guide extends User {
@@ -972,16 +363,8 @@ export class Guide extends User {
     rating!: Rating;
 }
 
-@ObjectType({ description: 'Рейтинг' })
-export class Rating {
-    @Field(_type => [Review], { description: 'Отзывы' })
-    @Property({ ref: 'Review' })
-    reviews!: Ref<Review>[];
+export const GuideModel = getDiscriminatorModelForClass(UserModel, Guide, UserType.Guide);
 
-    @Field(_type => Float, { description: 'Оценка' })
-    @Property({ required: true })
-    score!: number;
-}
 
 @ObjectType({ description: 'Оценка комментария (полезность)' })
 export class Usefulness {
@@ -1000,11 +383,11 @@ export class Review {
     readonly _id!: ObjectId;
 
     @Field(_type => DateTimeScalar)
-    @Property({ required: true, type: DateTimeMongo })
+    @Property({ required: true, type: mongoose.Schema.Types.DateTimeScalar })
     created_at!: DateTime;
 
     @Field(_type => DateTimeScalar, { description: 'Временная метка "ИЗМЕНЕННО" (отредактировано)', nullable: true })
-    @Property({ type: DateTimeMongo })
+    @Property({ type: mongoose.Schema.Types.DateTimeScalar })
     edited_at?: DateTime;
 
     @Field(_type => Float, { description: 'Оценка' })
@@ -1032,7 +415,7 @@ export class Review {
     usefulness!: Usefulness;
 }
 
-export const ReviewModel = createModelFrom(Review);
+export const ReviewModel = getModelForClass(Review);
 
 @ObjectType({ description: 'Комментарий' })
 export class Comment {
@@ -1040,11 +423,11 @@ export class Comment {
     readonly _id!: ObjectId;
 
     @Field(_type => DateTimeScalar)
-    @Property({ required: true, type: DateTimeMongo })
+    @Property({ required: true, type: mongoose.Schema.Types.DateTimeScalar })
     created_at!: DateTime;
 
     @Field(_type => DateTimeScalar, { description: 'Временная метка "ИЗМЕНЕННО" (отредактировано)', nullable: true })
-    @Property({ type: DateTimeMongo })
+    @Property({ type: mongoose.Schema.Types.DateTimeScalar })
     edited_at?: DateTime;
 
     @Field({ description: 'Контент (комментарий)', nullable: true })
@@ -1068,35 +451,41 @@ export class Comment {
     reply: Ref<Comment>[] = [];
 }
 
-export const CommentModel = createModelFrom(Comment);
+export const CommentModel = getModelForClass(Comment);
 
 @ObjectType({ description: 'Время работы' })
 export class WorkingHours {
     @Field(_type => TimeScalar, { description: 'Время открытия' })
-    @Property({ required: true, type: DateTimeMongo })
+    @Property({ required: true, type: mongoose.Schema.Types.DateTimeScalar })
     opening!: DateTime;
 
     @Field(_type => TimeScalar, { description: 'Время закрытия' })
-    @Property({ required: true, type: DateTimeMongo })
+    @Property({ required: true, type: mongoose.Schema.Types.DateTimeScalar })
     closing!: DateTime;
 }
 
 @ObjectType({ description: 'Даты работы [для временных «событий»]' })
 export class WorkingDays {
     @Field(_type => DateScalar, { description: 'Дата начала' })
-    @Property({ required: true, type: DateTimeMongo })
+    @Property({ required: true, type: mongoose.Schema.Types.DateTimeScalar })
     start!: DateTime;
 
     @Field(_type => DateScalar, { description: 'Дата окончания' })
-    @Property({ required: true, type: DateTimeMongo })
+    @Property({ required: true, type: mongoose.Schema.Types.DateTimeScalar })
     end!: DateTime;
+}
+
+@InterfaceType()
+class TouristObject {
+    @Field()
+    readonly _id!: ObjectId;
+
+    @Property({ required: true })
+    __type!: string;
 }
 
 @ObjectType({ description: 'Туристический объект (ресурс)' })
 export class TouristSite {
-    @Field()
-    readonly _id!: ObjectId;
-
     @Field(_type => Owner, { description: 'Владелец' })
     @Property({ required: true, ref: 'Owner' })
     owner!: Ref<Owner>;
@@ -1126,7 +515,7 @@ export class TouristSite {
     attachments!: Ref<Attachment>[];
 
     @Field(_type => DurationScalar, { description: 'Длительность', nullable: true })
-    @Property({ type: DurationMongo })
+    @Property({ type: mongoose.Schema.Types.DurationScalar })
     duration?: Duration;
 
     @Field(_type => Rating, { description: 'Рейтинг' })
@@ -1134,8 +523,8 @@ export class TouristSite {
     rating!: Rating;
 
     @Field(_type => ResourceStatus, { description: 'Статус объекта (ресурса)' })
-    @Property({ enum: RequestStatus, type: String })
-    staus: ResourceStatus = ResourceStatus.WAITING;
+    @Property({ enum: RequestStatus })
+    status: ResourceStatus = ResourceStatus.WAITING;
 }
 
 @ObjectType({ description: 'Туристический маршрут (ресурс)' })
@@ -1180,7 +569,7 @@ export class TouristRoute {
     distance?: number;
 
     @Field(_type => DurationScalar, { description: 'Длительность', nullable: true })
-    @Property({ type: DurationMongo })
+    @Property({ type: mongoose.Schema.Types.DurationScalar })
     duration?: Duration;
 
     @Field(_type => Rating, { description: 'Рейтинг' })
@@ -1192,8 +581,8 @@ export class TouristRoute {
     marketability: number = 0;
 
     @Field(_type => ResourceStatus, { description: 'Статус объекта (ресурса)' })
-    @Property({ enum: RequestStatus, type: String })
-    staus: ResourceStatus = ResourceStatus.WAITING;
+    @Property({ enum: RequestStatus })
+    status: ResourceStatus = ResourceStatus.WAITING;
 }
 
 @ObjectType({ description: 'Туристическое мероприятие (продукт)' })
@@ -1244,21 +633,21 @@ export class TouristEvent {
     @Field(_type => Rating, { description: 'Рейтинг' })
     @Property({ required: true })
     rating!: Rating;
+
+    @Field(_type => ResourceStatus, { description: 'Статус мероприятия' })
+    @Property({ enum: RequestStatus })
+    status: ResourceStatus = ResourceStatus.WAITING;
 }
 
 @ObjectType({ description: 'Ресурс запроса' })
 export class RequestAttachment {
-    @Field(_type => Int, { description: 'Версия ресурса запроса'})
-    @Property({ required: true })
-    version!: number;
-
     @Field(_type => TouristResource, { description: 'Прикрепленный ресурс' })
-    @Property({ required: true })
-    resource!: typeof TouristResource;
+    @Property({ required: true, ref: typeof TouristResource })
+    resource!: Ref<typeof TouristResource>;
 
-    @Field(_type => RequestResourceStatus, { description: 'Статус ресурса запроса' })
-    @Property({ enum: RequestResourceStatus })
-    status!: RequestResourceStatus;
+    @Field(_type => RequestStatus, { description: 'Статус ресурса запроса' })
+    @Property({ enum: RequestStatus })
+    status!: RequestStatus;
 
     @Field({ description: 'Замечания', nullable: true })
     @Property()
@@ -1279,4 +668,9 @@ export class ResourceRequest {
     resource!: RequestAttachment;
 }
 
-export const ResourceRequestModel = createModelFrom(ResourceRequest);
+export const ResourceRequestModel = getModelForClass(ResourceRequest);
+
+export const resolvers = [
+    AttachmentResolver,
+    UserResover,
+];

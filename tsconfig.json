@@ -18,6 +18,7 @@
         "types": ["node"]
     },
     "include": [
-        "server/**/*.mts"
+        "./server/**/*.mts",
+        "./server/src/scalars/scalars.d.ts"
     ]
 }

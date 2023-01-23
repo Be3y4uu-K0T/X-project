@@ -1,6 +1,7 @@
 import dotenv from 'dotenv'; dotenv.config();
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import { expressMiddleware } from '@apollo/server/express4';
+import { scalarsMap } from './scalars/scalars.mjs';
 import { ApolloServer } from '@apollo/server';
 import { buildSchema } from 'type-graphql';
 import { ObjectId } from 'mongodb';
@@ -17,10 +18,8 @@ import path from 'path';
 import {
     /* TODO */
     AttachmentModel,
-    AttachmentResolver,
-    scalarsMap,
+    resolvers
 } from './entites.mjs'
-
 
 interface Context {
     req: express.Request;
@@ -54,8 +53,8 @@ const httpServer = http.createServer(app);
 
 const server = new ApolloServer<Context>({
     schema: await buildSchema({
-        resolvers: [AttachmentResolver],
         emitSchemaFile: './docs/schema.gql',
+        resolvers: resolvers as any,
         validate: false,
         scalarsMap,
     }),
@@ -70,7 +69,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api', cors<cors.CorsRequest>(),
     expressMiddleware<Context>(server, {
         context: async ({ req, res }) => {
-            const token = req.headers.authorization ?? ''; // TODO: Add auth.
+            const token = req.headers.authorization ?? ''; // TODO: Add auth JWT
             return { req, res, token: req.headers.authorization };
         },
     }),
@@ -78,6 +77,7 @@ app.use('/api', cors<cors.CorsRequest>(),
 
 app.use('/cdn', express.static(path.resolve('./server/cdn'), {
     setHeaders(res, path, stat) {
+        console.log(path);
         res.type('application/unknown');
     },
 }));
