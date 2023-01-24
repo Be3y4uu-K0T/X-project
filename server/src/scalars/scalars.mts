@@ -7,6 +7,7 @@ import { ObjectIdScalar, ObjectId } from './ObjectId.mjs';
 import { EmailAddressScalar } from './EmailAddress.mjs';
 import { PhoneNumberScalar } from './PhoneNumber.mjs'
 import { URLScalar } from './URL.mjs';
+import { JWTScalar } from './JWT.mjs';
 
 export {
     EmailAddressScalar,
@@ -20,6 +21,7 @@ export {
     DateScalar,
     TimeScalar,
     URLScalar,
+    JWTScalar,
     DateTime,
     Duration,
     Interval,
