@@ -6,6 +6,7 @@ settings.json
 
 # Production
 /client/build
+/client/public
 
 # Logs
 logs
