@@ -475,15 +475,6 @@ export class WorkingDays {
     end!: DateTime;
 }
 
-@InterfaceType()
-class TouristObject {
-    @Field()
-    readonly _id!: ObjectId;
-
-    @Property({ required: true })
-    __type!: string;
-}
-
 @ObjectType({ description: 'Туристический объект (ресурс)' })
 export class TouristSite {
     @Field(_type => Owner, { description: 'Владелец' })
