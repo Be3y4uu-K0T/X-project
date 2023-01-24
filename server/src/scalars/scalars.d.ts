@@ -1,5 +1,3 @@
-import * as mongoose from 'mongoose';
-
 declare module 'mongoose' {
     namespace Schema {
         namespace Types {
@@ -31,6 +29,9 @@ declare module 'mongoose' {
                 constructor(key: string, options?: any);
             }
             class URLScalar extends SchemaType {
+                constructor(key: string, options?: any);
+            }
+            class JWTScalar extends SchemaType {
                 constructor(key: string, options?: any);
             }
         }
