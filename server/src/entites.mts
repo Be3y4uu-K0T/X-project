@@ -1,5 +1,6 @@
 import type { Ref, DocumentType } from '@typegoose/typegoose';
-import { IsInt, Length, MaxLength } from 'class-validator';
+import { IsInt, Length, Max, MaxLength, Min } from 'class-validator';
+import { accounts_server, accounts_password } from './auth.mjs';
 import mongoose from 'mongoose';
 
 import {
@@ -15,6 +16,7 @@ import {
     InputType,
     Mutation,
     Resolver,
+    ArgsType,
     Query,
     Field,
     Float,
@@ -24,6 +26,7 @@ import {
     Int,
     Ctx,
     ID,
+    ForbiddenError,
 } from 'type-graphql';
 
 import {
@@ -48,7 +51,7 @@ import {
     ResourceStatus,
     RequestStatus,
     EventStatus,
-    UserType,
+    Role,
     Country,
 } from './enums/enums.mjs';
 
@@ -121,7 +124,7 @@ export class AttachmentResolver {
     async addAttachment(
         @Arg('input', { validate: true }) input: AttachmentInput
     ) {
-        const document = await AttachmentModel.create(input);
+        const document = new AttachmentModel(input);
         return await document.save();
     }
 }
@@ -189,11 +192,11 @@ export class GeoLocation {
 export class Contact {
     @Field(_type => Address, { description: 'Адрес', nullable: true })
     @Property()
-    address!: Address;
+    address?: Address;
 
     @Field(_type => GeoLocation, { description: 'Геопозиция (для карты)', nullable: true })
     @Property()
-    location!: GeoLocation;
+    location?: GeoLocation;
 
     /* TODO
     @Field(_type => PassportScalar, { description: 'Паспортные данные', nullable: true })
@@ -203,11 +206,11 @@ export class Contact {
 
     @Field(_type => PhoneNumberScalar, { description: 'Номер контактного телефона', nullable: true })
     @Property()
-    phone!: string;
+    phone?: string;
 
-    @Field(_type => EmailAddressScalar, { description: 'Адрес электронной почты', nullable: true })
+    @Field(_type => EmailAddressScalar, { description: 'Адрес контакной электронной почты', nullable: true })
     @Property()
-    email!: string;
+    email?: string;
 }
 
 @ObjectType({ description: 'Рейтинг' })
@@ -237,21 +240,57 @@ export class User {
     readonly _id!: ObjectId;
 
     @Field(_type => DateTimeScalar)
-    @Property({ required: true, type: mongoose.Schema.Types.DateTimeScalar })
+    @Property({ type: mongoose.Schema.Types.DateTimeScalar })
     created_at!: DateTime;
 
-    @Field(_type => Contact)
+    @Field(_type => EmailAddressScalar, { description: 'Адрес электронной почты' })
+    @Property({ required: true, type: mongoose.Schema.Types.EmailAddressScalar, index: true, unique: true })
+    email!: string;
+
     @Property({ required: true })
-    contact!: Contact;
+    password!: string;
+
+    @Field(_type => Contact)
+    @Property()
+    contact: Contact = {};
+}
+
+@ArgsType()
+class GetUsersArgs {
+  @Field(_type => Int)
+  @Min(0)
+  skip: number = 0;
+
+  @Field(_type => Int)
+  @Min(1)
+  @Max(50)
+  take: number = 25;
+
+  @Field(_type => ObjectIdScalar, { nullable: true })
+  id?: ObjectId;
 }
 
 @Resolver(_of => User)
 export class UserResover {
+    @FieldResolver(_type => DateTimeScalar)
+    async created_at(
+        @Root() { _id }: User
+    ) {
+        return DateTime.fromJSDate(_id.getTimestamp());
+    }
+
     @Query(_returns => User, { nullable: true })
     async user(
         @Arg('id', _type => ObjectIdScalar) id: ObjectId
     ) {
         return await UserModel.findById(id);
+    }
+
+    @Query(_returns => [User])
+    async users(
+        @Args() { id, skip, take }: GetUsersArgs
+    ) {
+        return await UserModel.find({ filter: { id }, options: { skip, take } });
     }
 }
 
@@ -262,7 +301,24 @@ export class Admin extends User {
     /* TODO: Do need extra fields? */
 }
 
-export const AdminModel = getDiscriminatorModelForClass(UserModel, Admin, UserType.Admin);
+@Resolver(_of => Admin)
+export class AdminResolver {
+    @Query(_returns => Admin, { nullable: true })
+    async admin(
+        @Arg('id', _type => ObjectIdScalar) id: ObjectId
+    ) {
+        return await AdminModel.findById(id);
+    }
+
+    @Query(_returns => [Admin])
+    async admins(
+        @Args() { id, skip, take }: GetUsersArgs
+    ) {
+        return await AdminModel.find({ filter: { id }, options: { skip, take } });
+    }
+}
+
+export const AdminModel = getDiscriminatorModelForClass(UserModel, Admin, Role.Admin);
 
 @ObjectType({ description: 'Разработчик', implements: User })
 export class Developer extends User {
@@ -271,7 +327,7 @@ export class Developer extends User {
     rating!: Rating;
 }
 
-export const DeveloperModel = getDiscriminatorModelForClass(UserModel, Developer, UserType.Developer);
+export const DeveloperModel = getDiscriminatorModelForClass(UserModel, Developer, Role.Developer);
 
 @ObjectType({ description: 'Владелец', implements: User })
 export class Owner extends User {
@@ -306,7 +362,7 @@ export class Owner extends User {
     rating!: Rating;
 }
 
-export const OwnerModel = getDiscriminatorModelForClass(UserModel, Owner, UserType.Owner);
+export const OwnerModel = getDiscriminatorModelForClass(UserModel, Owner, Role.Owner);
 
 
 @ObjectType({ description: 'Клиент', implements: User })
@@ -335,7 +391,7 @@ export class Client extends User {
     birthday?: DateTime;
 }
 
-export const ClientModel = getDiscriminatorModelForClass(UserModel, Client, UserType.Client);
+export const ClientModel = getDiscriminatorModelForClass(UserModel, Client, Role.Client);
 
 
 @ObjectType({ description: 'Экскурсовод', implements: User })
@@ -363,18 +419,84 @@ export class Guide extends User {
     rating!: Rating;
 }
 
-export const GuideModel = getDiscriminatorModelForClass(UserModel, Guide, UserType.Guide);
+export const GuideModel = getDiscriminatorModelForClass(UserModel, Guide, Role.Guide);
 
+@ObjectType({ description: '' })
+export class Tokens {
+    @Field({ description: '' })
+    accessToken!: string;
+
+    @Field({ description: '' })
+    refreshToken!: string;
+}
+
+@ObjectType({ description: '' })
+export class SignIn {
+    @Field({ description: '' })
+    sessionId!: string;
+
+    @Field(_type => Tokens, { description: '' })
+    tokens!: Tokens;
+}
+
+@ArgsType()
+class RegistrationArgs {
+    @Field(_type => EmailAddressScalar)
+    @Length(3, 320)
+    email!: string;
+
+    @Field(/* _type => PasswordScalar // TODO: add difficulty */)
+    @Min(8)
+    password!: string;
+
+    @Field(_type => Role)
+    role!: Role;
+}
+
+@ArgsType()
+class AuthenticationArgs {
+    @Field(_type => EmailAddressScalar)
+    @Length(3, 320)
+    email!: string;
+
+    @Field(/* _type => PasswordScalar // TODO: add difficulty */)
+    @Min(8)
+    password!: string;
+}
+
+@Resolver()
+export class AuthResolver {
+    @Mutation(_returns => Boolean, { description: 'Регистрация' })
+    async signup(
+        @Args() { email, password, role }: RegistrationArgs
+    ) {
+        return !!await accounts_password.createUser({ email, password, role });
+        // return await accounts_server.loginWithService('password',
+        //     { user, password },
+        //     { /* TODO: Maybe additonal info */ },
+        // );
+    }
+
+    @Query(_returns => SignIn, { description: 'Вход' })
+    async signin(
+        @Args() { email, password }: AuthenticationArgs
+    ) {
+        return await accounts_server.loginWithService('password',
+            { user: { email }, password },
+            { /* TODO: Maybe additonal info */ },
+        );
+    }
+}
 
 @ObjectType({ description: 'Оценка комментария (полезность)' })
 export class Usefulness {
     @Field(_type => Int, { description: 'Кол-во отметок "ЗА"' })
     @Property()
-    like: number = 0;
+    upvotes: number = 0;
 
     @Field(_type => Int, { description: 'Кол-во отметок "ПРОТИВ"' })
     @Property()
-    dislike: number = 0;
+    downvotes: number = 0;
 }
 
 @ObjectType({ description: 'Отзыв' })
@@ -448,7 +570,11 @@ export class Comment {
 
     @Field(_type => [Comment], { description: 'Ответы (комментарие)' })
     @Property({ ref: 'Comment' })
-    reply: Ref<Comment>[] = [];
+    replies: Ref<Comment>[] = [];
+
+    @Field(_type => Comment, { description: 'Оригинальный комментарий', nullable: true })
+    @Property({ ref: 'Comment' })
+    reply_to?: Ref<Comment>;
 }
 
 export const CommentModel = getModelForClass(Comment);
@@ -663,5 +789,6 @@ export const ResourceRequestModel = getModelForClass(ResourceRequest);
 
 export const resolvers = [
     AttachmentResolver,
+    AuthResolver,
     UserResover,
 ];

@@ -5,12 +5,16 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc -p tsconfig.json && (cd client && yarn build)",
-    "start": "yarn build && node --no-deprecation ./dist/server.mjs"
+    "start": "yarn build && node -r dotenv/config --no-deprecation ./dist/server.mjs"
   },
   "dependencies": {
+    "@accounts/database-manager": "^0.33.1",
+    "@accounts/mongo": "^0.34.0",
+    "@accounts/password": "^0.32.2",
+    "@accounts/server": "^0.33.1",
     "@apollo/server": "^4.3.1",
     "@typegoose/typegoose": "^10.0.0",
-    "bcrypt": "^5.1.0",
+    "argon2": "^0.30.3",
     "class-validator": "^0.14.0",
     "config": "^3.3.9",
     "cookie-parser": "^1.4.6",
@@ -20,9 +24,11 @@
     "jsonwebtoken": "^9.0.0",
     "luxon": "^3.2.1",
     "mime-types": "^2.1.35",
+    "mongodb": "^4.13.0",
     "mongoose": "^6.8.4",
     "multer": "^1.4.5-lts.1",
     "nanoid": "^4.0.0",
+    "nodemailer": "^6.9.0",
     "reflect-metadata": "^0.1.13",
     "type-graphql": "^2.0.0-beta.1"
   },
@@ -39,6 +45,7 @@
     "@types/mime-types": "^2.1.1",
     "@types/multer": "^1.4.7",
     "@types/node": "^18.11.18",
+    "@types/nodemailer": "^6.4.7",
     "@types/react": "^18.0.27",
     "@types/react-dom": "^18.0.10",
     "@types/react-redux": "^7.1.25",

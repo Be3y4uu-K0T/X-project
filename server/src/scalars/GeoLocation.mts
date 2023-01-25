@@ -2,12 +2,12 @@ import { GraphQLScalarType, GraphQLError, Kind } from 'graphql';
 import { Schema, SchemaType } from 'mongoose';
 
 // See https://en.wikipedia.org/wiki/Decimal_degrees#Precision
-const MAX_PRECISION = 8;
+export const MAX_PRECISION = 8;
 
 // Minimum latitude
-const MIN_LATITUDE = -90.0;
+export const MIN_LATITUDE = -90.0;
 // Maximum latitude
-const MAX_LATITUDE = +90.0;
+export const MAX_LATITUDE = +90.0;
 
 export const LatitudeScalar = new GraphQLScalarType({
     name: 'Latitude',
@@ -44,9 +44,9 @@ export const LatitudeScalar = new GraphQLScalarType({
 });
 
 // Minimum longitude
-const MIN_LONGITUDE = -180.0;
+export const MIN_LONGITUDE = -180.0;
 // Maximum longitude
-const MAX_LONGITUDE = +180.0;
+export const MAX_LONGITUDE = +180.0;
 
 export const LongitudeScalar = new GraphQLScalarType({
     name: 'Longitude',

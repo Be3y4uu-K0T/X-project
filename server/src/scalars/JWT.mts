@@ -2,7 +2,7 @@ import { GraphQLScalarType, GraphQLError, Kind } from 'graphql';
 import { Schema, SchemaType } from 'mongoose';
 
 // See: https://github.com/auth0/node-jws/blob/master/lib/verify-stream.js#L8
-const JWS_REGEX = /^[a-zA-Z0-9\-_]+?\.[a-zA-Z0-9\-_]+?\.([a-zA-Z0-9\-_]+)?$/;
+export const JWS_REGEX = /^[a-zA-Z0-9\-_]+?\.[a-zA-Z0-9\-_]+?\.([a-zA-Z0-9\-_]+)?$/;
 
 export const JWTScalar = new GraphQLScalarType({
     name: 'JWT',

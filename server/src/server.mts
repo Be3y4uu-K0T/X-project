@@ -1,12 +1,9 @@
-import dotenv from 'dotenv'; dotenv.config();
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import { expressMiddleware } from '@apollo/server/express4';
 import { scalarsMap } from './scalars/scalars.mjs';
 import { ApolloServer } from '@apollo/server';
 import { buildSchema } from 'type-graphql';
 import { ObjectId } from 'mongodb';
-import { connect } from 'mongoose';
-import bodyparser from 'body-parser';
 import express from 'express';
 import mime from 'mime-types';
 import multer from 'multer';
@@ -14,6 +11,12 @@ import 'reflect-metadata';
 import http from 'http';
 import cors from 'cors';
 import path from 'path';
+import './auth.mjs';
+
+import {
+    ApolloServerPluginLandingPageProductionDefault,
+    ApolloServerPluginLandingPageLocalDefault,
+} from '@apollo/server/plugin/landingPage/default';
 
 import {
     /* TODO */
@@ -37,16 +40,13 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage,
     limits: {
-        fileSize: 16*1024*1024, // 16MiB
+        fileSize: 16*1024*1024, // FIXME: 16MiB
         fields: 0,
         files: 10,
         parts: 10,
     },
 });
 
-
-const mongoose = await connect(process.env.DB_URI!);
-await mongoose.connection.db.stats();
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -58,11 +58,16 @@ const server = new ApolloServer<Context>({
         validate: false,
         scalarsMap,
     }),
-    plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
+    plugins: [
+        ApolloServerPluginDrainHttpServer({ httpServer }),
+        process.env.NODE_ENV === 'production' ?
+        ApolloServerPluginLandingPageProductionDefault() :
+        ApolloServerPluginLandingPageLocalDefault(),
+    ],
 });
 await server.start();
 
-app.use(bodyparser.json());
+app.use(express.json())
 app.use(express.urlencoded({ extended: true }));
 
 // GraphQL
@@ -77,7 +82,6 @@ app.use('/api', cors<cors.CorsRequest>(),
 
 app.use('/cdn', express.static(path.resolve('./server/cdn'), {
     setHeaders(res, path, stat) {
-        console.log(path);
         res.type('application/unknown');
     },
 }));
@@ -92,18 +96,16 @@ app.post('/cdn', upload.single('file'), async (req, res) => { // TODO: Add auth 
     const filename = file.originalname;
     const mimetype = mime.extension(file.mimetype) ? file.mimetype : mime.lookup(filename) || 'application/unknown';
     const url = `${req.protocol}://${req.get('host')}/cdn/${file.filename}`;
-    const _id = ObjectId.createFromHexString(file.filename);
-    const document = await AttachmentModel.create({ _id, url, filename, mimetype, size }); // TODO: Add user field.
+    const id = new ObjectId(file.filename);
+    const document = new AttachmentModel({ id, url, filename, mimetype, size }); // TODO: Add user field.
     await document.save();
-    res.json({ id: _id, url });
+    return res.json({ id, url });
 });
 
 // React App
-app.use(express.static(path.resolve('./client/build')));
-app.use(express.static(path.resolve('./client/public')));
-app.use((req, res, next) => {
-    res.sendFile(path.resolve('./client/build/index.html'));
-});
+app.use('/', express.static(path.resolve('./client/build')));
+
+// app.get('/verify-email/:id', async (req, res) => { }); // TODO
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -114,7 +116,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
             return res.status(413).send(err.code);
         return res.status(500).send(err.code);
     }
-    next(err);
+    return res.send(err.status || 500);
 });
 
 await new Promise<void>((resolve) => httpServer.listen({ port: 4000 }, resolve));

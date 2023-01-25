@@ -44,6 +44,9 @@ type Admin implements User {
   _id: ObjectId!
   contact: Contact!
   created_at: DateTime!
+
+  """Адрес электронной почты"""
+  email: EmailAddress!
 }
 
 """Вложение"""
@@ -87,6 +90,9 @@ type Client implements User {
   contact: Contact!
   created_at: DateTime!
 
+  """Адрес электронной почты"""
+  email: EmailAddress!
+
   """Имя"""
   firstname: String
 
@@ -105,7 +111,7 @@ type Contact {
   """Адрес"""
   address: Address
 
-  """Адрес электронной почты"""
+  """Адрес контакной электронной почты"""
   email: EmailAddress
 
   """Геопозиция (для карты)"""
@@ -380,6 +386,9 @@ type Developer implements User {
   contact: Contact!
   created_at: DateTime!
 
+  """Адрес электронной почты"""
+  email: EmailAddress!
+
   """Рейтинг"""
   rating: Rating!
 }
@@ -405,6 +414,9 @@ type Guide implements User {
   contact: Contact!
   created_at: DateTime!
 
+  """Адрес электронной почты"""
+  email: EmailAddress!
+
   """Имя"""
   firstname: String!
 
@@ -427,6 +439,11 @@ scalar Latitude
 """A decimal degrees latitude number."""
 scalar Longitude
 
+type Mutation {
+  """Регистрация"""
+  signup(email: EmailAddress!, password: String!, role: Role!): Boolean!
+}
+
 """Mongodb object id scalar type"""
 scalar ObjectId
 
@@ -435,6 +452,9 @@ type Owner implements User {
   _id: ObjectId!
   contact: Contact!
   created_at: DateTime!
+
+  """Адрес электронной почты"""
+  email: EmailAddress!
 
   """Имя"""
   firstname: String!
@@ -464,7 +484,11 @@ scalar PhoneNumber
 type Query {
   addAttachment(input: AttachmentInput!): Attachment!
   attachment(id: ObjectId!): Attachment
+
+  """Вход"""
+  signin(email: EmailAddress!, password: String!): SignIn!
   user(id: ObjectId!): User
+  users(id: ObjectId, skip: Int! = 0, take: Int! = 25): [User!]!
 }
 
 """Рейтинг"""
@@ -516,8 +540,44 @@ type Review {
   usefulness: Usefulness!
 }
 
+"""Роль"""
+enum Role {
+  """Администратор"""
+  Admin
+
+  """Клиент"""
+  Client
+
+  """Разработчик"""
+  Developer
+
+  """Экскурсовод"""
+  Guide
+
+  """Владелец"""
+  Owner
+}
+
+""""""
+type SignIn {
+  """"""
+  sessionId: String!
+
+  """"""
+  tokens: Tokens!
+}
+
 """An ISO-8601 encoded time string."""
 scalar Time
+
+""""""
+type Tokens {
+  """"""
+  accessToken: String!
+
+  """"""
+  refreshToken: String!
+}
 
 """Туристический маршрут (ресурс)"""
 type TouristRoute {
@@ -602,12 +662,12 @@ type Usefulness {
   """
   Кол-во отметок "ПРОТИВ"
   """
-  dislike: Int!
+  downvotes: Int!
 
   """
   Кол-во отметок "ЗА"
   """
-  like: Int!
+  upvotes: Int!
 }
 
 """Пользователь"""
@@ -615,6 +675,9 @@ interface User {
   _id: ObjectId!
   contact: Contact!
   created_at: DateTime!
+
+  """Адрес электронной почты"""
+  email: EmailAddress!
 }
 
 """Даты работы [для временных «событий»]"""

@@ -1,7 +1,7 @@
 import { GraphQLScalarType, GraphQLError, Kind } from 'graphql';
 import { Schema, SchemaType } from 'mongoose';
 
-const PHONE_NUMBER_REGEX = /^\+[1-9]\d{6,14}$/;
+export const PHONE_NUMBER_REGEX = /^\+[1-9]\d{6,14}$/;
 
 export const PhoneNumberScalar = new GraphQLScalarType({
     name: 'PhoneNumber',
