@@ -9,7 +9,6 @@ import { getClientIp } from 'request-ip';
 import { Mongo } from '@accounts/mongo';
 import { connect } from 'mongoose';
 import nodemailer from 'nodemailer';
-import jwt from 'jsonwebtoken';
 import argon2 from 'argon2';
 
 const mongoose = await connect(process.env.MONGO_DB_URI!);

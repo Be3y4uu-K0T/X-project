@@ -1,6 +1,6 @@
-import type { Ref, DocumentType } from '@typegoose/typegoose';
 import { IsInt, Length, Max, MaxLength, Min } from 'class-validator';
 import { accounts_server, accounts_password } from './auth.mjs';
+import type { Ref, DocumentType } from '@typegoose/typegoose';
 import type { Context } from './auth.mjs';
 import mongoose from 'mongoose';
 
@@ -755,9 +755,9 @@ export class TouristEvent {
     @Property({ required: true })
     rating!: Rating;
 
-    @Field(_type => ResourceStatus, { description: 'Статус мероприятия' })
+    @Field(_type => EventStatus, { description: 'Статус мероприятия' })
     @Property({ enum: RequestStatus })
-    status: ResourceStatus = ResourceStatus.WAITING;
+    status: EventStatus = EventStatus.SCHEDULED;
 }
 
 @ObjectType({ description: 'Ресурс запроса' })
