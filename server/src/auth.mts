@@ -31,8 +31,8 @@ export interface Context {
 }
 
 export const context: ContextFunction<[ExpressContextFunctionArgument], Context> = async ({ req, res }) => {
-    const auth = req.headers.authorization;
-    const token = auth?.startsWith('Bearer ') && auth.replace('Bearer ', '') || undefined;
+    const header = req.headers.authorization;
+    const token = header?.startsWith('Bearer ') && header.replace('Bearer ', '') || undefined;
     let user: User | undefined;
     try {
         // TS-BUG: `user = access_token && await (...)` will return typeof user is `"" | User | undefined`
