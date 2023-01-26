@@ -26,6 +26,7 @@ import {
 
 import {
     accounts_password,
+    authChecker,
     Context,
     context,
 } from './auth.mjs';
@@ -57,6 +58,7 @@ const server = new ApolloServer<Context>({
         emitSchemaFile: './docs/schema.gql',
         resolvers: resolvers as any,
         validate: false,
+        authChecker,
         scalarsMap,
     }),
     plugins: [

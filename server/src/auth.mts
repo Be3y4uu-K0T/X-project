@@ -4,10 +4,12 @@ import type { ContextFunction } from '@apollo/server';
 import { AccountsPassword } from '@accounts/password';
 import { User } from '@accounts/types/lib/types/user';
 import { AccountsServer } from '@accounts/server';
+import { AuthChecker } from 'type-graphql';
 import { getClientIp } from 'request-ip';
 import { Mongo } from '@accounts/mongo';
 import { connect } from 'mongoose';
 import nodemailer from 'nodemailer';
+import jwt from 'jsonwebtoken';
 import argon2 from 'argon2';
 
 const mongoose = await connect(process.env.MONGO_DB_URI!);
@@ -18,9 +20,7 @@ const accounts_db = new Mongo(mongoose.connection, {
     sessionCollectionName: 'auth_sessions',
 });
 const argon_options: argon2.Options & { raw?: false } = { type: argon2.argon2d, saltLength: 10 };
-const transporter = nodemailer.createTransport({
-    /* TODO */
-});
+const transporter = nodemailer.createTransport({ /* TODO */ });
 
 export interface Context {
     id?: string;
@@ -35,7 +35,7 @@ export const context: ContextFunction<[ExpressContextFunctionArgument], Context>
     const token = auth?.startsWith('Bearer ') && auth.replace('Bearer ', '') || undefined;
     let user: User | undefined;
     try {
-        // TS-BUG: `user = token && await (...)` will return typeof user is `"" | User | undefined`
+        // TS-BUG: `user = access_token && await (...)` will return typeof user is `"" | User | undefined`
         // But "" is impossible, even after assert check: `assert(token !== '')`!
         if (token) user = await accounts_server.resumeSession(token);
     } catch (error) { /* ... */ }
@@ -55,6 +55,12 @@ export const context: ContextFunction<[ExpressContextFunctionArgument], Context>
     };
 };
 
+export const authChecker: AuthChecker<Context> = async ({ root, args, context, info }, roles) => {
+    if (!context.user) return false;
+    const role: string = (context.user as any).role; // BUG: Thx Mongo from @accounts/mongo
+    return roles.includes(role);
+}
+
 export const accounts_password = new AccountsPassword({
     validateEmail: (email) => (typeof email === 'string' && EMAIL_ADDRESS_REGEXP.test(email)),
     hashPassword: (password) => argon2.hash(password, argon_options),
@@ -67,14 +73,16 @@ export const accounts_server = new AccountsServer(
     {
         db: accounts_db,
         tokenSecret: {
-            publicKey: process.env.JWT_PUBLIC_KEY!,
-            privateKey: process.env.JWT_PRIVATE_KEY!,
+            publicKey: Buffer.from(process.env.JWT_PUBLIC_KEY!, 'base64'),
+            privateKey: Buffer.from(process.env.JWT_PRIVATE_KEY!, 'base64'),
         },
         tokenConfigs: {
             accessToken: {
+                algorithm: 'RS256',
                 expiresIn: process.env.JWT_ACCESS_TOKEN_LIFETIME!
             },
             refreshToken: {
+                algorithm: 'RS256',
                 expiresIn: process.env.JWT_REFRESH_TOKEN_LIFETIME!
             },
         },
@@ -88,16 +96,14 @@ export const accounts_server = new AccountsServer(
             verifyEmail: {
                 subject: (user?: User) => `Verify your account email ${user?.username}`,
                 text: (user: User, url: string) => url, // FIXME: `To verify your account email please click on this link: ${url}`,
-            }
+            },
         },
         createJwtPayload: async (data, user) => {
             return {
                 role: (user as any).role // TODO: Problem with generic `CustomUser` and `Mongo`
-            }
+            };
         },
         siteUrl: `http://localhost:${process.env.PORT!}`,
     },
-    {
-        password: accounts_password
-    }
+    { password: accounts_password },
 );

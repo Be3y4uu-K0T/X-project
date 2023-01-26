@@ -285,6 +285,7 @@ export class UserResover {
         return await UserModel.findById(id);
     }
 
+    @Authorized("ADMIN")
     @Query(_returns => [User])
     async users(
         @Args() { id, skip, take }: GetUsersArgs
