@@ -60,6 +60,7 @@ export const accounts_password = new AccountsPassword({
     hashPassword: (password) => argon2.hash(password, argon_options),
     verifyPassword: (password, hash) => argon2.verify(hash, password, argon_options),
     sendVerificationEmailAfterSignup: true,
+    validateNewUser: (user) => user,
 });
 
 export const accounts_server = new AccountsServer(
@@ -90,8 +91,6 @@ export const accounts_server = new AccountsServer(
             }
         },
         createJwtPayload: async (data, user) => {
-            // console.log(`createJwtPayload:data: ${JSON.stringify(data)}`);
-            // console.log(`createJwtPayload:user: ${JSON.stringify(user)}`);
             return {
                 role: (user as any).role // TODO: Problem with generic `CustomUser` and `Mongo`
             }
