@@ -24,11 +24,12 @@ import {
     resolvers
 } from './entites.mjs'
 
-interface Context {
-    req: express.Request;
-    res: express.Response;
-    token?: string;
-}
+import {
+    accounts_password,
+    Context,
+    context,
+} from './auth.mjs';
+
 
 const storage = multer.diskStorage({
     destination: './server/cdn',
@@ -60,9 +61,9 @@ const server = new ApolloServer<Context>({
     }),
     plugins: [
         ApolloServerPluginDrainHttpServer({ httpServer }),
-        process.env.NODE_ENV === 'production' ?
-        ApolloServerPluginLandingPageProductionDefault() :
-        ApolloServerPluginLandingPageLocalDefault(),
+        process.env.NODE_ENV! === 'production'
+        ? ApolloServerPluginLandingPageProductionDefault()
+        : ApolloServerPluginLandingPageLocalDefault(),
     ],
 });
 await server.start();
@@ -71,22 +72,14 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }));
 
 // GraphQL
-app.use('/api', cors<cors.CorsRequest>(),
-    expressMiddleware<Context>(server, {
-        context: async ({ req, res }) => {
-            const token = req.headers.authorization ?? ''; // TODO: Add auth JWT
-            return { req, res, token: req.headers.authorization };
-        },
-    }),
-);
+app.use('/api', cors<cors.CorsRequest>(), expressMiddleware<Context>(server, { context }));
 
 app.use('/cdn', express.static(path.resolve('./server/cdn'), {
+    fallthrough: false,
     setHeaders(res, path, stat) {
         res.type('application/unknown');
     },
 }));
-
-app.use('/cdn/*', async (req, res) => { return res.status(404).send('Cannot find file.')});
 app.post('/cdn', upload.single('file'), async (req, res) => { // TODO: Add auth check.
     if (!req.file)
         return res.status(500).send('File is undefined.');
@@ -105,7 +98,15 @@ app.post('/cdn', upload.single('file'), async (req, res) => { // TODO: Add auth 
 // React App
 app.use('/', express.static(path.resolve('./client/build')));
 
-// app.get('/verify-email/:id', async (req, res) => { }); // TODO
+// Verify Email
+app.get('/verify-email/:token', async (req, res) => {
+    try {
+        await accounts_password.verifyEmail(req.params.token);
+    } catch (error) {
+        return res.json({ ok: false });
+    }
+    return res.json({ ok: true });
+});
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

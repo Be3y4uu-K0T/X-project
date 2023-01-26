@@ -1,10 +1,11 @@
+import type { ExpressContextFunctionArgument } from '@apollo/server/express4';
 import { EMAIL_ADDRESS_REGEXP } from './scalars/EmailAddress.mjs';
-import { User as UserBase } from '@accounts/types/lib/types/user';
-import { DatabaseManager } from '@accounts/database-manager';
+import type { ContextFunction } from '@apollo/server';
 import { AccountsPassword } from '@accounts/password';
+import { User } from '@accounts/types/lib/types/user';
 import { AccountsServer } from '@accounts/server';
+import { getClientIp } from 'request-ip';
 import { Mongo } from '@accounts/mongo';
-import { Role } from './enums/Role.mjs';
 import { connect } from 'mongoose';
 import nodemailer from 'nodemailer';
 import argon2 from 'argon2';
@@ -12,22 +13,49 @@ import argon2 from 'argon2';
 const mongoose = await connect(process.env.MONGO_DB_URI!);
 await mongoose.connection.db.stats();
 
-const user_storage = new Mongo(mongoose.connection, {
+const accounts_db = new Mongo(mongoose.connection, {
     collectionName: 'auth_users',
     sessionCollectionName: 'auth_sessions',
 });
-const accounts_db = new DatabaseManager({ sessionStorage: user_storage, userStorage: user_storage });
 const argon_options: argon2.Options & { raw?: false } = { type: argon2.argon2d, saltLength: 10 };
 const transporter = nodemailer.createTransport({
     /* TODO */
 });
 
-
-export interface User extends UserBase {
-    role: Role;
+export interface Context {
+    id?: string;
+    user?: User;
+    token?: string;
+    ip?: string;
+    userAgent?: string;
 }
 
-export const accounts_password = new AccountsPassword<User>({
+export const context: ContextFunction<[ExpressContextFunctionArgument], Context> = async ({ req, res }) => {
+    const auth = req.headers.authorization;
+    const token = auth?.startsWith('Bearer ') && auth.replace('Bearer ', '') || undefined;
+    let user: User | undefined;
+    try {
+        // TS-BUG: `user = token && await (...)` will return typeof user is `"" | User | undefined`
+        // But "" is impossible, even after assert check: `assert(token !== '')`!
+        if (token) user = await accounts_server.resumeSession(token);
+    } catch (error) { /* ... */ }
+
+    const ip = getClientIp(req) ?? undefined;
+    let userAgent = req.headers['user-agent'];
+    if (req.headers['x-ucbrowser-ua']) {
+      userAgent = req.headers['x-ucbrowser-ua'] as string; // special case of UC Browser
+    }
+
+    return {
+        id: user && user.id,
+        token,
+        user,
+        ip,
+        userAgent,
+    };
+};
+
+export const accounts_password = new AccountsPassword({
     validateEmail: (email) => (typeof email === 'string' && EMAIL_ADDRESS_REGEXP.test(email)),
     hashPassword: (password) => argon2.hash(password, argon_options),
     verifyPassword: (password, hash) => argon2.verify(hash, password, argon_options),
@@ -57,8 +85,15 @@ export const accounts_server = new AccountsServer(
         emailTemplates: {
             from: 'x-project <no-reply@x-project.com>',
             verifyEmail: {
-                subject: (user?: UserBase) => `Verify your account email ${user?.username}`,
-                text: (user: UserBase, url: string) => url, // FIXME: `To verify your account email please click on this link: ${url}`,
+                subject: (user?: User) => `Verify your account email ${user?.username}`,
+                text: (user: User, url: string) => url, // FIXME: `To verify your account email please click on this link: ${url}`,
+            }
+        },
+        createJwtPayload: async (data, user) => {
+            // console.log(`createJwtPayload:data: ${JSON.stringify(data)}`);
+            // console.log(`createJwtPayload:user: ${JSON.stringify(user)}`);
+            return {
+                role: (user as any).role // TODO: Problem with generic `CustomUser` and `Mongo`
             }
         },
         siteUrl: `http://localhost:${process.env.PORT!}`,

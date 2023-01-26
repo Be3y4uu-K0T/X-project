@@ -1,6 +1,7 @@
 import type { Ref, DocumentType } from '@typegoose/typegoose';
 import { IsInt, Length, Max, MaxLength, Min } from 'class-validator';
 import { accounts_server, accounts_password } from './auth.mjs';
+import type { Context } from './auth.mjs';
 import mongoose from 'mongoose';
 
 import {
@@ -10,9 +11,11 @@ import {
 } from '@typegoose/typegoose';
 
 import {
+    UnauthorizedError,
     InterfaceType,
     FieldResolver,
     ObjectType,
+    Authorized,
     InputType,
     Mutation,
     Resolver,
@@ -26,7 +29,6 @@ import {
     Int,
     Ctx,
     ID,
-    ForbiddenError,
 } from 'type-graphql';
 
 import {
@@ -51,8 +53,8 @@ import {
     ResourceStatus,
     RequestStatus,
     EventStatus,
-    Role,
     Country,
+    Role,
 } from './enums/enums.mjs';
 
 import {
@@ -247,10 +249,7 @@ export class User {
     @Property({ required: true, type: mongoose.Schema.Types.EmailAddressScalar, index: true, unique: true })
     email!: string;
 
-    @Property({ required: true })
-    password!: string;
-
-    @Field(_type => Contact)
+    @Field(_type => Contact, { description: 'Контакные данные' })
     @Property()
     contact: Contact = {};
 }
@@ -421,21 +420,21 @@ export class Guide extends User {
 
 export const GuideModel = getDiscriminatorModelForClass(UserModel, Guide, Role.Guide);
 
-@ObjectType({ description: '' })
+@ObjectType({ description: 'JWT токены' })
 export class Tokens {
-    @Field({ description: '' })
+    @Field({ description: 'Токен доступа' })
     accessToken!: string;
 
-    @Field({ description: '' })
+    @Field({ description: 'Токен обновления' })
     refreshToken!: string;
 }
 
-@ObjectType({ description: '' })
-export class SignIn {
-    @Field({ description: '' })
+@ObjectType({ description: 'Сеанс' })
+export class Session {
+    @Field({ description: 'Идентификатор сеанса' })
     sessionId!: string;
 
-    @Field(_type => Tokens, { description: '' })
+    @Field(_type => Tokens, { description: 'JWT токены' })
     tokens!: Tokens;
 }
 
@@ -459,7 +458,7 @@ class AuthenticationArgs {
     @Length(3, 320)
     email!: string;
 
-    @Field(/* _type => PasswordScalar // TODO: add difficulty */)
+    @Field()
     @Min(8)
     password!: string;
 }
@@ -471,20 +470,24 @@ export class AuthResolver {
         @Args() { email, password, role }: RegistrationArgs
     ) {
         return !!await accounts_password.createUser({ email, password, role });
-        // return await accounts_server.loginWithService('password',
-        //     { user, password },
-        //     { /* TODO: Maybe additonal info */ },
-        // );
     }
 
-    @Query(_returns => SignIn, { description: 'Вход' })
+    @Mutation(_returns => Session, { description: 'Вход' })
     async signin(
-        @Args() { email, password }: AuthenticationArgs
+        @Args() { email, password }: AuthenticationArgs,
+        @Ctx() { ip, userAgent }: Context
     ) {
-        return await accounts_server.loginWithService('password',
+        const success = await accounts_server.authenticateWithService('password',
             { user: { email }, password },
-            { /* TODO: Maybe additonal info */ },
+            { ip, userAgent },
         );
+        if (!success)
+            throw new UnauthorizedError();
+        else
+            return await accounts_server.loginWithService('password',
+                { user: { email }, password },
+                { /* TODO: Maybe additonal info */ },
+            );
     }
 }
 

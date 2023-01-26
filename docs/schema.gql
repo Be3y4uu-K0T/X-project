@@ -42,6 +42,8 @@ type AddressElement {
 """Администратор"""
 type Admin implements User {
   _id: ObjectId!
+
+  """Контакные данные"""
   contact: Contact!
   created_at: DateTime!
 
@@ -87,6 +89,8 @@ type Client implements User {
 
   """Дата рождения"""
   birthday: Date
+
+  """Контакные данные"""
   contact: Contact!
   created_at: DateTime!
 
@@ -383,6 +387,8 @@ scalar DateTime
 """Разработчик"""
 type Developer implements User {
   _id: ObjectId!
+
+  """Контакные данные"""
   contact: Contact!
   created_at: DateTime!
 
@@ -411,6 +417,8 @@ type GeoLocation {
 """Экскурсовод"""
 type Guide implements User {
   _id: ObjectId!
+
+  """Контакные данные"""
   contact: Contact!
   created_at: DateTime!
 
@@ -440,6 +448,9 @@ scalar Latitude
 scalar Longitude
 
 type Mutation {
+  """Вход"""
+  signin(email: EmailAddress!, password: String!): Session!
+
   """Регистрация"""
   signup(email: EmailAddress!, password: String!, role: Role!): Boolean!
 }
@@ -450,6 +461,8 @@ scalar ObjectId
 """Владелец"""
 type Owner implements User {
   _id: ObjectId!
+
+  """Контакные данные"""
   contact: Contact!
   created_at: DateTime!
 
@@ -484,9 +497,6 @@ scalar PhoneNumber
 type Query {
   addAttachment(input: AttachmentInput!): Attachment!
   attachment(id: ObjectId!): Attachment
-
-  """Вход"""
-  signin(email: EmailAddress!, password: String!): SignIn!
   user(id: ObjectId!): User
   users(id: ObjectId, skip: Int! = 0, take: Int! = 25): [User!]!
 }
@@ -558,24 +568,24 @@ enum Role {
   Owner
 }
 
-""""""
-type SignIn {
-  """"""
+"""Сеанс"""
+type Session {
+  """Идентификатор сеанса"""
   sessionId: String!
 
-  """"""
+  """JWT токены"""
   tokens: Tokens!
 }
 
 """An ISO-8601 encoded time string."""
 scalar Time
 
-""""""
+"""JWT токены"""
 type Tokens {
-  """"""
+  """Токен доступа"""
   accessToken: String!
 
-  """"""
+  """Токен обновления"""
   refreshToken: String!
 }
 
@@ -673,6 +683,8 @@ type Usefulness {
 """Пользователь"""
 interface User {
   _id: ObjectId!
+
+  """Контакные данные"""
   contact: Contact!
   created_at: DateTime!
 
