@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<title></title>
+</head>
+<body>
+	<div id="root" class="container">
+		<form method="POST" action="http://localhost:4000/event/new">
+			<div class="file_input">
+				<input type="file" name="image" accept="image/*" multiple="multiple">
+				<img src="kisspng-computer-icons-cloud-computing-computer-software-5afd6c5f3e5cc7.1935554615265577912554.png">
+			</div>
+			
+
+			<label for="title">Название</label>
+			<input type="text" name="title">
+
+			<label for="description">Описание</label>
+			<textarea rows="5"></textarea>
+
+
+			<input type="submit" value="Добавить" name="site">
+		</form>
+	</div>
+</body>
+</html>

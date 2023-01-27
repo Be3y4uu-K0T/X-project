@@ -1,0 +1,71 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap");
+* {
+  box-sizing: border-box;
+}
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  background-color: #f7f8fc;
+  font-family: "Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
+  color: #10182f;
+}
+.container {
+  display: flex;
+  width: 1040px;
+  justify-content: space-evenly;
+  flex-wrap: wrap;
+}
+
+form {
+  margin: 10px;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  width: 300px;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.file_input {
+  border: 2px solid gray;
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+input[type='file'] {
+  width: 100%;
+  height: 180px;
+  opacity: 0;
+  position: absolute;
+}
+
+textarea {
+    width: 100%;
+    border: 2px solid gray;
+    border-radius: 5px;
+}
+
+label {
+  text-align: center;
+}
+
+input {
+  border: 2px solid gray;
+  border-radius: 5px;
+}
+
+input[type="submit"] {
+  width: 25%;
+  align-self: center;
+}
+
+img {
+  width: 50%;
+  height: 70%;
+}
