@@ -1,6 +1,7 @@
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import { expressMiddleware } from '@apollo/server/express4';
 import { scalarsMap } from './scalars/scalars.mjs';
+import { expressjwt as jwt  } from 'express-jwt';
 import { ApolloServer } from '@apollo/server';
 import { buildSchema } from 'type-graphql';
 import { ObjectId } from 'mongodb';
@@ -11,6 +12,7 @@ import 'reflect-metadata';
 import http from 'http';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import './auth.mjs';
 
 import {
@@ -76,29 +78,37 @@ app.use(express.urlencoded({ extended: true }));
 // GraphQL
 app.use('/api', cors<cors.CorsRequest>(), expressMiddleware<Context>(server, { context }));
 
-app.use('/cdn', express.static(path.resolve('./server/cdn'), {
-    fallthrough: false,
-    setHeaders(res, path, stat) {
-        res.type('application/unknown');
+// Attachments
+app.post('/cdn',
+    jwt({ secret: Buffer.from(process.env.JWT_PUBLIC_KEY!, 'base64'), algorithms: ['RS256'] }),
+    upload.single('file'),
+    async (req, res) => {
+        if (!req.file)
+            return res.status(500).send('File is undefined.');
+
+        const file = req.file;
+        const size = file.size;
+        const filename = file.originalname;
+        const mimetype = mime.extension(file.mimetype) ? file.mimetype : mime.lookup(filename) || 'application/unknown';
+        const url = `${req.protocol}://${req.get('host')}/cdn/${file.filename}`;
+        const _id = new ObjectId(file.filename);
+        const document = new AttachmentModel({ _id, url, filename, mimetype, size }); // TODO: Add user field.
+        await document.save();
+        return res.json({ id: _id, url });
     },
-}));
-app.post('/cdn', upload.single('file'), async (req, res) => { // TODO: Add auth check.
-    if (!req.file)
-        return res.status(500).send('File is undefined.');
-
-    const file = req.file;
-    const size = file.size;
-    const filename = file.originalname;
-    const mimetype = mime.extension(file.mimetype) ? file.mimetype : mime.lookup(filename) || 'application/unknown';
-    const url = `${req.protocol}://${req.get('host')}/cdn/${file.filename}`;
-    const id = new ObjectId(file.filename);
-    const document = new AttachmentModel({ id, url, filename, mimetype, size }); // TODO: Add user field.
-    await document.save();
-    return res.json({ id, url });
+);
+app.delete('/cdn/:id', async (req, res) => {
+    const _id = req.params['id'];
+    const attachment = await AttachmentModel.findOneAndDelete({ _id });
+    if (!attachment)
+        return res.sendStatus(404);
+    fs.unlinkSync(path.resolve(`./server/cdn/${_id}`));
+    return res.sendStatus(200);
 });
-
-// React App
-app.use('/', express.static(path.resolve('./client/build')));
+app.use('/cdn', express.static(path.resolve('./server/cdn'), {
+    setHeaders: (res, path, stat) => res.type('application/unknown'),
+    fallthrough: false,
+}));
 
 // Verify Email
 app.get('/verify-email/:token', async (req, res) => {
@@ -109,6 +119,9 @@ app.get('/verify-email/:token', async (req, res) => {
     }
     return res.json({ ok: true });
 });
+
+// React App
+app.use('/', express.static(path.resolve('./client/build')));
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -122,5 +135,5 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     return res.send(err.status || 500);
 });
 
-await new Promise<void>((resolve) => httpServer.listen({ port: 4000 }, resolve));
-console.log(`🚀 Server listening at: http://localhost:4000/`);
+await new Promise<void>((resolve) => httpServer.listen({ port: Number(process.env.PORT!) }, resolve));
+console.log(`🚀 Server listening at: http://localhost:${process.env.PORT!}/`);
