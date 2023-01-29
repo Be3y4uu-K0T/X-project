@@ -1,7 +1,8 @@
-import { IsInt, Length, Max, MaxLength, Min } from 'class-validator';
+import { IsDate, IsEmail, IsEnum, IsIn, IsInt, IsMimeType, IsMongoId, IsNumber, IsOptional, IsPhoneNumber, IsString, IsUrl, Length, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { accounts_server, accounts_password } from './auth.mjs';
 import type { Ref, DocumentType } from '@typegoose/typegoose';
 import type { Context } from './auth.mjs';
+import { Type } from 'class-transformer';
 import mongoose from 'mongoose';
 
 import {
@@ -61,6 +62,34 @@ import {
     TouristResource,
 } from './unions/unions.mjs';
 
+@ArgsType()
+class PaginationArgs {
+    @Field(_type => Int, { description: '' })
+    @IsInt()
+    @Min(0)
+    skip: number = 0;
+
+    @Field(_type => Int, { description: '' })
+    @IsInt()
+    @Min(1)
+    @Max(100)
+    take: number = 25;
+
+    @Field(_type => Int, { description: '' })
+    @IsInt()
+    @Min(1)
+    page: number = 1;
+
+    @Field(_type => ObjectIdScalar, { description: '', nullable: true })
+    @IsOptional()
+    @IsMongoId()
+    after_id?: ObjectId;
+
+    @Field(_type => ObjectIdScalar, { description: '', nullable: true })
+    @IsOptional()
+    @IsMongoId()
+    before_id?: ObjectId;
+}
 
 @ObjectType({ description: 'Вложение' })
 export class Attachment {
@@ -93,18 +122,21 @@ export class Attachment {
 @InputType({ description: 'Загружаемое вложение' })
 export class AttachmentInput {
     @Field(_type => URLScalar, { description: 'Ссылка на вложение' })
+    @IsUrl()
     url!: URL;
 
     @Field({ description: 'Имя файла вложения', nullable: true })
+    @IsString()
     @Length(1, 32)
     filename?: string;
 
     @Field({ description: 'Тип файла вложения' })
-    @MaxLength(64)
+    @IsMimeType()
     mimetype!: string;
 
     @Field(_type => Int, { description: 'Размер файла вложения' })
     @IsInt()
+    @Min(0)
     size!: number;
 
     /* TODO:
@@ -144,6 +176,19 @@ export class AddressElement {
     designation!: string;
 }
 
+@InputType({ description: 'Элемент адреса' })
+export class AddressElementInput {
+    @Field({ description: 'Вид/Тип' })
+    @IsString()
+    @MinLength(1)
+    type!: string;
+
+    @Field({ description: 'Наименование/Номер' })
+    @IsString()
+    @MinLength(1)
+    designation!: string;
+}
+
 @ObjectType({ description: 'Адрес' })
 export class Address {
     @Field(_type => Country, { description: 'Страна (наименование)' })
@@ -179,6 +224,46 @@ export class Address {
     apartament?: number;
 }
 
+@InputType({ description: 'Адрес' })
+export class AddressInput {
+    @Field(_type => Country, { description: 'Страна (наименование)' })
+    @IsEnum(Country)
+    country!: Country;
+
+    @Field({ description: 'Субъект (наименование)' })
+    @IsString()
+    @MinLength(1)
+    subject!: string;
+
+    @Field({ description: 'Городской округ (наименование)' })
+    @IsString()
+    @MinLength(1)
+    district!: string;
+
+    @Field(_type => AddressElementInput, { description: 'Населенный пункт (вид, наименование)' })
+    @Type(_type => AddressElementInput)
+    locality!: AddressElementInput;
+
+    @Field(_type => AddressElementInput, { description: 'Элемент улично-дорожной сети (вид, наименование)' })
+    @Type(_type => AddressElementInput)
+    street!: AddressElementInput;
+
+    @Field(_type => AddressElementInput, { description: 'Здание/сооружение (тип, номер)' })
+    @Type(_type => AddressElementInput)
+    building!: AddressElementInput;
+
+    @Field(_type => AddressElementInput, { description: 'Здание/сооружение [доп.] (тип, номер)', nullable: true })
+    @IsOptional()
+    @IsString()
+    @Type(_type => AddressElementInput)
+    additional?: AddressElementInput;
+
+    @Field(_type => Int, { description: 'Номер квартири/офиса [доп.]', nullable: true })
+    @IsOptional()
+    @IsInt()
+    apartament?: number;
+}
+
 @ObjectType({ description: 'Геопозиция' })
 export class GeoLocation {
     @Field(_type => LatitudeScalar, { description: 'Широта' })
@@ -187,6 +272,17 @@ export class GeoLocation {
 
     @Field(_type => LongitudeScalar, { description: 'Долгота' })
     @Property({ required: true })
+    longitude!: number;
+}
+
+@InputType({ description: 'Геопозиция' })
+export class GeoLocationInput {
+    @Field(_type => LatitudeScalar, { description: 'Широта' })
+    @IsNumber()
+    latitude!: number;
+
+    @Field(_type => LongitudeScalar, { description: 'Долгота' })
+    @IsNumber()
     longitude!: number;
 }
 
@@ -215,6 +311,34 @@ export class Contact {
     email?: string;
 }
 
+@InputType()
+class ContactInput {
+    @Field(_type => AddressInput, { description: 'Адрес', nullable: true })
+    @IsOptional()
+    @Type(_type => AddressInput)
+    address?: AddressInput;
+
+    @Field(_type => GeoLocationInput, { description: 'Геопозиция (для карты)', nullable: true })
+    @IsOptional()
+    @Type(_type => GeoLocationInput)
+    location?: GeoLocationInput;
+
+    /* TODO
+    @Field(_type => PassportScalar, { description: 'Паспортные данные', nullable: true })
+    passport!: string;
+    */
+
+    @Field(_type => PhoneNumberScalar, { description: 'Номер контактного телефона', nullable: true })
+    @IsOptional()
+    @IsPhoneNumber('RU')
+    phone?: string;
+
+    @Field(_type => EmailAddressScalar, { description: 'Адрес контакной электронной почты', nullable: true })
+    @IsOptional()
+    @IsEmail()
+    email?: string;
+}
+
 @ObjectType({ description: 'Рейтинг' })
 export class Rating {
     @Field(_type => [Review], { description: 'Отзывы' })
@@ -238,8 +362,12 @@ export class Rating {
 
 @InterfaceType({ description: 'Пользователь' })
 export class User {
-    @Field()
+    @Field(_type => ObjectIdScalar)
     readonly _id!: ObjectId;
+
+    @Field(_type => Attachment, { description: 'Изображение профиля', nullable: true })
+    @Property({ _id: false })
+    avatar?: Attachment;
 
     @Field(_type => DateTimeScalar)
     @Property({ type: mongoose.Schema.Types.DateTimeScalar })
@@ -250,23 +378,8 @@ export class User {
     email!: string;
 
     @Field(_type => Contact, { description: 'Контакные данные' })
-    @Property()
-    contact: Contact = {};
-}
-
-@ArgsType()
-class GetUsersArgs {
-  @Field(_type => Int)
-  @Min(0)
-  skip: number = 0;
-
-  @Field(_type => Int)
-  @Min(1)
-  @Max(50)
-  take: number = 25;
-
-  @Field(_type => ObjectIdScalar, { nullable: true })
-  id?: ObjectId;
+    @Property({ _id: false, type: Contact, default: new Contact() })
+    contact!: Contact;
 }
 
 @Resolver(_of => User)
@@ -278,7 +391,7 @@ export class UserResover {
         return DateTime.fromJSDate(_id.getTimestamp());
     }
 
-    @Query(_returns => User, { nullable: true })
+    @Query(_returns => User, { description: '', nullable: true })
     async user(
         @Arg('id', _type => ObjectIdScalar) id: ObjectId
     ) {
@@ -286,11 +399,15 @@ export class UserResover {
     }
 
     @Authorized("ADMIN")
-    @Query(_returns => [User])
+    @Query(_returns => [User], { description: '' })
     async users(
-        @Args() { id, skip, take }: GetUsersArgs
+        @Args() { after_id, before_id, skip, take, page }: PaginationArgs
     ) {
-        return await UserModel.find({ filter: { id }, options: { skip, take } });
+        const filter = {
+            ...(after_id ? { $gt: { id: after_id } } : {}),
+            ...(before_id ? { $lt : { id: before_id } }: {}),
+        };
+        return await UserModel.find(filter, undefined, { skip: take * page + skip, take });
     }
 }
 
@@ -312,9 +429,13 @@ export class AdminResolver {
 
     @Query(_returns => [Admin])
     async admins(
-        @Args() { id, skip, take }: GetUsersArgs
+        @Args() { after_id, before_id, skip, take, page }: PaginationArgs
     ) {
-        return await AdminModel.find({ filter: { id }, options: { skip, take } });
+        const filter = {
+            ...(after_id ? { $gt: { id: after_id } } : {}),
+            ...(before_id ? { $lt : { id: before_id } }: {}),
+        };
+        return await AdminModel.find(filter, undefined, { skip: take * page + skip, take });
     }
 }
 
@@ -322,6 +443,28 @@ export const AdminModel = getDiscriminatorModelForClass(UserModel, Admin, Role.A
 
 @ObjectType({ description: 'Разработчик', implements: User })
 export class Developer extends User {
+    @Field({ description: 'Фамилия' })
+    @Property({ required: true })
+    lastaname!: string;
+
+    @Field({ description: 'Отчество' })
+    @Property({ required: true })
+    middlename!: string;
+
+    @Field({ description: 'Имя' })
+    @Property({ required: true })
+    firstname!: string;
+
+    @Field({ description: 'Полное ФИО', nullable: true })
+    @Property({ default: function (this: DocumentType<Guide>) {
+        return `${this.lastaname} ${this.firstname} ${this.middlename}`;
+    }})
+    fullname?: string;
+
+    @Field(_type => [TouristEvent], { description: 'Туристические мероприятие' })
+    @Property({ required: true, ref: 'TouristRoute' })
+    events!: Ref<TouristRoute>[];
+
     @Field(_type => Rating, { description: 'Рейтинг' })
     @Property({ required: true })
     rating!: Rating;
@@ -347,14 +490,14 @@ export class Owner extends User {
     @Property({ default: function (this: DocumentType<Guide>) {
         return `${this.lastaname} ${this.firstname} ${this.middlename}`;
     }})
-    public fullname?: string;
+    fullname!: string;
 
     @Field(_type => [TouristSite], { description: 'Туристические точки (ресурсы)' })
     @Property({ required: true, ref: 'TouristSite' })
     sites!: Ref<TouristSite>[];
 
     @Field(_type => [TouristRoute], { description: 'Туристические маршруты (продукты)' })
-    @Property({ required: true, ref: 'TouristSite' })
+    @Property({ required: true, ref: 'TouristRoute' })
     routes!: Ref<TouristRoute>[];
 
     @Field(_type => Rating, { description: 'Рейтинг' })
@@ -363,7 +506,6 @@ export class Owner extends User {
 }
 
 export const OwnerModel = getDiscriminatorModelForClass(UserModel, Owner, Role.Owner);
-
 
 @ObjectType({ description: 'Клиент', implements: User })
 export class Client extends User {
@@ -379,12 +521,12 @@ export class Client extends User {
     @Property()
     firstname?: string;
 
-    @Field({ description: 'Полное ФИО' })
+    @Field({ description: 'Полное ФИО', nullable: true })
     @Property({ default: function (this: DocumentType<Client>) {
         if (this.lastaname && this.firstname && this.middlename)
             return `${this.lastaname} ${this.firstname} ${this.middlename}`;
     }})
-    public fullname?: string;
+    fullname?: string;
 
     @Field(_type => DateScalar, { description: 'Дата рождения', nullable: true })
     @Property({ type: mongoose.Schema.Types.DateTimeScalar })
@@ -392,7 +534,6 @@ export class Client extends User {
 }
 
 export const ClientModel = getDiscriminatorModelForClass(UserModel, Client, Role.Client);
-
 
 @ObjectType({ description: 'Экскурсовод', implements: User })
 export class Guide extends User {
@@ -412,7 +553,7 @@ export class Guide extends User {
     @Property({ default: function (this: DocumentType<Guide>) {
         return `${this.lastaname} ${this.firstname} ${this.middlename}`;
     }})
-    public fullname?: string;
+    public fullname!: string;
 
     @Field(_type => Rating, { description: 'Рейтинг' })
     @Property({ required: true })
@@ -440,38 +581,147 @@ export class Session {
 }
 
 @ArgsType()
-class RegistrationArgs {
-    @Field(_type => EmailAddressScalar)
+class RegistrationAsClientArgs {
+    @Field(_type => EmailAddressScalar, { description: 'Адрес электронной почты' })
+    @IsEmail()
+    email!: string;
+
+    @Field(/* _type => PasswordScalar // TODO: add difficulty */ { description: 'Пароль' })
+    @IsString()
+    @MinLength(8)
+    password!: string;
+
+    @Field(_type => AttachmentInput, { description: 'Изображение профиля', nullable: true })
+    @IsOptional()
+    @Type(_type => AttachmentInput)
+    avatar?: AttachmentInput;
+
+    @Field(_type => ContactInput, { description: 'Контакные данные', nullable: true })
+    @IsOptional()
+    @Type(_type => ContactInput)
+    contact?: ContactInput;
+
+    @Field({ description: 'Фамилия', nullable: true })
+    @IsOptional()
+    @IsString()
+    @MinLength(1)
+    lastaname?: string;
+
+    @Field({ description: 'Отчество', nullable: true })
+    @IsOptional()
+    @IsString()
+    @MinLength(1)
+    middlename?: string;
+
+    @Field({ description: 'Имя', nullable: true })
+    @IsOptional()
+    @IsString()
+    @MinLength(1)
+    firstname?: string;
+
+    @Field({ description: 'Полное ФИО', nullable: true })
+    @IsOptional()
+    @IsString()
+    @MinLength(1)
+    fullname?: string =
+        this.firstname && this.middlename && this.lastaname
+        && `${this.lastaname} ${this.firstname} ${this.middlename}`;
+
+    @Field(_type => DateScalar, { description: 'Дата рождения', nullable: true })
+    @IsOptional()
+    @Type(_type => DateTime)
+    birthday?: DateTime;
+}
+
+@ArgsType()
+class RegistrationAsDeveloperArgs {
+    @Field(_type => EmailAddressScalar, { description: 'Адрес электронной почты' })
+    @IsEmail()
     @Length(3, 320)
     email!: string;
 
-    @Field(/* _type => PasswordScalar // TODO: add difficulty */)
-    @Min(8)
+    @Field(/* _type => PasswordScalar // TODO: add difficulty */ { description: 'Пароль' })
+    @IsString()
+    @MinLength(8)
     password!: string;
 
-    @Field(_type => Role)
-    role!: Role;
+    @Field(_type => AttachmentInput, { description: 'Изображение профиля', nullable: true })
+    @IsOptional()
+    @Type(_type => AttachmentInput)
+    avatar?: AttachmentInput;
+
+    @Field(_type => ContactInput, { description: 'Контакные данные', nullable: true })
+    @IsOptional()
+    @Type(_type => ContactInput)
+    contact?: ContactInput;
+
+    @Field({ description: 'Фамилия', nullable: true })
+    @IsString()
+    @MinLength(1)
+    lastaname!: string;
+
+    @Field({ description: 'Отчество', nullable: true })
+    @IsString()
+    @MinLength(1)
+    middlename!: string;
+
+    @Field({ description: 'Имя', nullable: true })
+    @IsString()
+    @MinLength(1)
+    firstname!: string;
+
+    @Field({ description: 'Полное ФИО', nullable: true })
+    @IsOptional()
+    @IsString()
+    @MinLength(1)
+    fullname?: string =
+        this.firstname && this.middlename && this.lastaname
+        && `${this.lastaname} ${this.firstname} ${this.middlename}`;
+
+    @Field(_type => DateScalar, { description: 'Дата рождения', nullable: true })
+    @IsOptional()
+    @Type(_type => DateTime)
+    birthday?: DateTime;
 }
 
 @ArgsType()
 class AuthenticationArgs {
     @Field(_type => EmailAddressScalar)
+    @IsEmail()
     @Length(3, 320)
     email!: string;
 
-    @Field()
+    @Field(/* _type => PasswordScalar // TODO: add difficulty */ { description: 'Пароль' })
     @Min(8)
     password!: string;
 }
 
 @Resolver()
 export class AuthResolver {
-    @Mutation(_returns => Boolean, { description: 'Регистрация' })
-    async signup(
-        @Args() { email, password, role }: RegistrationArgs
+    @Mutation(_returns => Client, { description: 'Регистрация (как клиент)', nullable: true })
+    async signup_as_client(
+        @Args() { email, password, ...data}: RegistrationAsClientArgs
     ) {
-        return !!await accounts_password.createUser({ email, password, role });
+        const user_id = new ObjectId();
+        const failed = !await accounts_password.createUser({ email, password, role: 'CLIENT', user_id });
+        if (failed) return null;
+        const document = new ClientModel({ id: user_id, email, ...data });
+        return (await document.save()).toObject({ minimize: false });
     }
+
+    @Mutation(_returns => Developer, { description: 'Регистрация (как разработчика)', nullable: true })
+    async signup_as_developer(
+        @Args() { email, password, ...data }: RegistrationAsDeveloperArgs
+    ) {
+        const user_id = new ObjectId();
+        const failed = !await accounts_password.createUser({ email, password, role: 'DEVELOPER', user_id });
+        if (failed) return null;
+        const document = new DeveloperModel({ id: user_id, email, ...data });
+        await document.save();
+        return document;
+    }
+
+    /* TODO: Добавить другие роли */
 
     @Mutation(_returns => Session, { description: 'Вход' })
     async signin(
@@ -505,7 +755,7 @@ export class Usefulness {
 
 @ObjectType({ description: 'Отзыв' })
 export class Review {
-    @Field()
+    @Field(_type => ObjectIdScalar)
     readonly _id!: ObjectId;
 
     @Field(_type => DateTimeScalar)
@@ -545,7 +795,7 @@ export const ReviewModel = getModelForClass(Review);
 
 @ObjectType({ description: 'Комментарий' })
 export class Comment {
-    @Field()
+    @Field(_type => ObjectIdScalar)
     readonly _id!: ObjectId;
 
     @Field(_type => DateTimeScalar)
@@ -644,13 +894,36 @@ export class TouristSite {
     rating!: Rating;
 
     @Field(_type => ResourceStatus, { description: 'Статус объекта (ресурса)' })
-    @Property({ enum: RequestStatus })
+    @Property({ enum: RequestStatus, type: String })
     status: ResourceStatus = ResourceStatus.WAITING;
+}
+
+export const TouristSiteModel = getModelForClass(TouristSite);
+
+@Resolver(_of => TouristSite)
+export class TouristSiteResolver {
+    @Query(_returns => TouristSite, { description: '', nullable: true })
+    async tourist_route(
+        @Arg('id', _type => ObjectIdScalar) id: ObjectId
+    ) {
+        return await TouristRouteModel.findById(id);
+    }
+
+    @Query(_returns => [TouristSite], { description: '' })
+    async tourist_sites(
+        @Args() { after_id, before_id, skip, take, page }: PaginationArgs
+    ) {
+        const filter = {
+            ...(after_id ? { $gt: { id: after_id } } : undefined),
+            ...(before_id ? { $lt : { id: before_id } }: undefined),
+        };
+        return await TouristSiteModel.find(filter, undefined, { skip: take * page + skip, take });
+    }
 }
 
 @ObjectType({ description: 'Туристический маршрут (ресурс)' })
 export class TouristRoute {
-    @Field()
+    @Field(_type => ObjectIdScalar)
     readonly _id!: ObjectId;
 
     @Field(_type => Developer, { description: 'Разработчик' })
@@ -702,13 +975,36 @@ export class TouristRoute {
     marketability: number = 0;
 
     @Field(_type => ResourceStatus, { description: 'Статус объекта (ресурса)' })
-    @Property({ enum: RequestStatus })
+    @Property({ enum: RequestStatus, type: String })
     status: ResourceStatus = ResourceStatus.WAITING;
+}
+
+export const TouristRouteModel = getModelForClass(TouristRoute);
+
+@Resolver(_of => TouristRoute)
+export class TouristRouteResolver {
+    @Query(_returns => TouristRoute, { description: '', nullable: true })
+    async tourist_route(
+        @Arg('id', _type => ObjectIdScalar) id: ObjectId
+    ) {
+        return await TouristRouteModel.findById(id);
+    }
+
+    @Query(_returns => [TouristRoute], { description: '' })
+    async tourist_routes(
+        @Args() { after_id, before_id, skip, take, page }: PaginationArgs
+    ) {
+        const filter = {
+            ...(after_id ? { $gt: { id: after_id } } : {}),
+            ...(before_id ? { $lt : { id: before_id } }: {}),
+        };
+        return await TouristRouteModel.find(filter, undefined, { skip: take * page + skip, take });
+    }
 }
 
 @ObjectType({ description: 'Туристическое мероприятие (продукт)' })
 export class TouristEvent {
-    @Field()
+    @Field(_type => ObjectIdScalar)
     readonly _id!: ObjectId;
 
     @Field(_type => Developer, { description: 'Разработчик' })
@@ -735,13 +1031,9 @@ export class TouristEvent {
     @Property({ ref: 'Guide' })
     guide!: Ref<Guide>;
 
-    @Field(_type => WorkingHours, { description: 'Часы работы' })
+    @Field(_type => IntervalScalar, { description: 'Дата и время проведения' })
     @Property({ required: true })
-    wokringhours!: WorkingHours;
-
-    @Field(_type => WorkingDays, { description: 'Дата проведения' })
-    @Property({ required: true })
-    wokringdays!: WorkingDays;
+    timing!: Interval;
 
     @Field(_type => [Attachment], { description: 'Вложения' })
     @Property({ required: true, ref: 'Attachment' })
@@ -756,8 +1048,40 @@ export class TouristEvent {
     rating!: Rating;
 
     @Field(_type => EventStatus, { description: 'Статус мероприятия' })
-    @Property({ enum: RequestStatus })
+    @Property({ enum: RequestStatus, type: String })
     status: EventStatus = EventStatus.SCHEDULED;
+
+    @Field(_type => Float, { description: 'Цена', nullable: true })
+    price?: number;
+}
+
+export const TouristEventModel = getModelForClass(TouristEvent);
+
+@Resolver(_of => TouristEvent)
+export class TouristEventResolver {
+    @Query(_returns => TouristEvent, { description: '', nullable: true })
+    async tourist_event(
+        @Arg('id', _type => ObjectIdScalar) id: ObjectId
+    ) {
+        return await TouristEventModel.findById(id);
+    }
+
+    @Query(_returns => [TouristEvent], { description: '' })
+    async tourist_events(
+        @Args() { after_id, before_id, skip, take, page }: PaginationArgs,
+        @Ctx('role') role: string,
+        @Ctx('id') id: ObjectId
+    ) {
+        const filter = {
+            ...(after_id ? { $gt: { id: after_id } } : undefined),
+            ...(before_id ? { $lt : { id: before_id } }: undefined),
+            ...(role !== 'ADMIN' ? { $or: [
+                    { status: { $eq: ResourceStatus.ACTIVE } },
+                    { developer: { $eq: id } },
+                ]} : undefined),
+        };
+        return await TouristEventModel.find(filter, undefined, { skip: take * page + skip, take });
+    }
 }
 
 @ObjectType({ description: 'Ресурс запроса' })
@@ -767,7 +1091,7 @@ export class RequestAttachment {
     resource!: Ref<typeof TouristResource>;
 
     @Field(_type => RequestStatus, { description: 'Статус ресурса запроса' })
-    @Property({ enum: RequestStatus })
+    @Property({ enum: RequestStatus, type: String })
     status!: RequestStatus;
 
     @Field({ description: 'Замечания', nullable: true })
@@ -777,7 +1101,7 @@ export class RequestAttachment {
 
 @ObjectType({ description: 'Запрос на добавление ресурса' })
 export class ResourceRequest {
-    @Field()
+    @Field(_type => ObjectIdScalar)
     readonly _id!: ObjectId;
 
     @Field(_type => [RequestAttachment], { description: 'История ресурса' })
@@ -792,6 +1116,9 @@ export class ResourceRequest {
 export const ResourceRequestModel = getModelForClass(ResourceRequest);
 
 export const resolvers = [
+    TouristRouteResolver,
+    TouristEventResolver,
+    TouristSiteResolver,
     AttachmentResolver,
     AuthResolver,
     UserResover,

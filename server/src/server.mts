@@ -97,14 +97,17 @@ app.post('/cdn',
         return res.json({ id: _id, url });
     },
 );
-app.delete('/cdn/:id', async (req, res) => {
-    const _id = req.params['id'];
-    const attachment = await AttachmentModel.findOneAndDelete({ _id });
-    if (!attachment)
-        return res.sendStatus(404);
-    fs.unlinkSync(path.resolve(`./server/cdn/${_id}`));
-    return res.sendStatus(200);
-});
+app.delete('/cdn/:id',
+    jwt({ secret: Buffer.from(process.env.JWT_PUBLIC_KEY!, 'base64'), algorithms: ['RS256'] }),
+    async (req, res) => {
+        const id = new ObjectId(req.params['id']);
+        const attachment = await AttachmentModel.findByIdAndDelete(id);
+        if (!attachment)
+            return res.sendStatus(404);
+        fs.unlinkSync(path.resolve(`./server/cdn/${id}`));
+        return res.sendStatus(200);
+    },
+);
 app.use('/cdn', express.static(path.resolve('./server/cdn'), {
     setHeaders: (res, path, stat) => res.type('application/unknown'),
     fallthrough: false,

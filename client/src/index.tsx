@@ -1,19 +1,38 @@
+import { ApolloClient, InMemoryCache, ApolloProvider, gql, createHttpLink } from '@apollo/client';
+import { setContext } from '@apollo/client/link/context';
+import { createRoot } from 'react-dom/client';
 import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
 import App from './App';
-import reportWebVitals from './reportWebVitals';
+import './index.css';
+import { cookies } from './components/signin';
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-);
+const authLink = setContext((req, { headers }) => {
+  // get the authentication token from local storage if it exists
+  const token = cookies.access_token as string;
+  // return the headers to the context so httpLink can read them
+  return {
+    headers: {
+      ...headers,
+      authorization: token ? `Bearer ${token}` : "",
+    }
+  }
+});
+
+const client = new ApolloClient({
+  uri: 'http://localhost:4000/api',
+  cache: new InMemoryCache(),
+  link: authLink.concat(createHttpLink({
+    uri: '/api',
+  })),
+});
+
+const container = document.getElementById('root')!;
+const root = createRoot(container);
+
 root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+  <ApolloProvider client={client}>
+    {/* <Provider store={store}> */}
+      <App />
+    {/* </Provider> */}
+  </ApolloProvider>
 );
-
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();

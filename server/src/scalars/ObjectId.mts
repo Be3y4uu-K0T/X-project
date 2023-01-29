@@ -5,6 +5,8 @@ export const ObjectIdScalar = new GraphQLScalarType({
     name: 'ObjectId',
     description: 'Mongodb object id scalar type',
     serialize(value: unknown): string {
+        if (typeof value === 'string')
+            return (new ObjectId(value)).toHexString()
         if (value instanceof ObjectId)
             return value.toHexString();
         throw new GraphQLError(`Value is not a valid mongodb ObjectId: ${value}`);

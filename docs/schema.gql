@@ -39,9 +39,48 @@ type AddressElement {
   type: String!
 }
 
+"""Элемент адреса"""
+input AddressElementInput {
+  """Наименование/Номер"""
+  designation: String!
+
+  """Вид/Тип"""
+  type: String!
+}
+
+"""Адрес"""
+input AddressInput {
+  """Здание/сооружение [доп.] (тип, номер)"""
+  additional: AddressElementInput
+
+  """Номер квартири/офиса [доп.]"""
+  apartament: Int
+
+  """Здание/сооружение (тип, номер)"""
+  building: AddressElementInput!
+
+  """Страна (наименование)"""
+  country: Country!
+
+  """Городской округ (наименование)"""
+  district: String!
+
+  """Населенный пункт (вид, наименование)"""
+  locality: AddressElementInput!
+
+  """Элемент улично-дорожной сети (вид, наименование)"""
+  street: AddressElementInput!
+
+  """Субъект (наименование)"""
+  subject: String!
+}
+
 """Администратор"""
 type Admin implements User {
   _id: ObjectId!
+
+  """Изображение профиля"""
+  avatar: Attachment
 
   """Контакные данные"""
   contact: Contact!
@@ -87,6 +126,9 @@ input AttachmentInput {
 type Client implements User {
   _id: ObjectId!
 
+  """Изображение профиля"""
+  avatar: Attachment
+
   """Дата рождения"""
   birthday: Date
 
@@ -101,13 +143,42 @@ type Client implements User {
   firstname: String
 
   """Полное ФИО"""
-  fullname: String!
+  fullname: String
 
   """Фамилия"""
   lastaname: String
 
   """Отчество"""
   middlename: String
+}
+
+"""Комментарий"""
+type Comment {
+  _id: ObjectId!
+
+  """"""
+  attachments: [Attachment!]!
+
+  """Автор комментария"""
+  author: User!
+
+  """Контент (комментарий)"""
+  content: String
+  created_at: DateTime!
+
+  """Временная метка "ИЗМЕНЕННО" (отредактировано)"""
+  edited_at: DateTime
+
+  """Ответы (комментарие)"""
+  replies: [Comment!]!
+
+  """Оригинальный комментарий"""
+  reply_to: Comment
+
+  """
+  Кол-во отметок "ПОЛЕЗНО"
+  """
+  usefulness: Int!
 }
 
 """Контакные данные"""
@@ -120,6 +191,20 @@ type Contact {
 
   """Геопозиция (для карты)"""
   location: GeoLocation
+
+  """Номер контактного телефона"""
+  phone: PhoneNumber
+}
+
+input ContactInput {
+  """Адрес"""
+  address: AddressInput
+
+  """Адрес контакной электронной почты"""
+  email: EmailAddress
+
+  """Геопозиция (для карты)"""
+  location: GeoLocationInput
 
   """Номер контактного телефона"""
   phone: PhoneNumber
@@ -388,12 +473,30 @@ scalar DateTime
 type Developer implements User {
   _id: ObjectId!
 
+  """Изображение профиля"""
+  avatar: Attachment
+
   """Контакные данные"""
   contact: Contact!
   created_at: DateTime!
 
   """Адрес электронной почты"""
   email: EmailAddress!
+
+  """Туристические мероприятие"""
+  events: [TouristEvent!]!
+
+  """Имя"""
+  firstname: String!
+
+  """Полное ФИО"""
+  fullname: String
+
+  """Фамилия"""
+  lastaname: String!
+
+  """Отчество"""
+  middlename: String!
 
   """Рейтинг"""
   rating: Rating!
@@ -405,8 +508,32 @@ scalar Duration
 """A RFC 1123 encoded email address string."""
 scalar EmailAddress
 
+"""Статус мероприятия"""
+enum EventStatus {
+  """ЗАБЛОКИРОВАНО"""
+  BLOCKED
+
+  """ОТМЕНЕНО"""
+  CANCELLED
+
+  """ПРОВЕДЕНО"""
+  CONDUCTED
+
+  """ЗАПЛАНИРОВАНО"""
+  SCHEDULED
+}
+
 """Геопозиция"""
 type GeoLocation {
+  """Широта"""
+  latitude: Latitude!
+
+  """Долгота"""
+  longitude: Longitude!
+}
+
+"""Геопозиция"""
+input GeoLocationInput {
   """Широта"""
   latitude: Latitude!
 
@@ -417,6 +544,9 @@ type GeoLocation {
 """Экскурсовод"""
 type Guide implements User {
   _id: ObjectId!
+
+  """Изображение профиля"""
+  avatar: Attachment
 
   """Контакные данные"""
   contact: Contact!
@@ -441,6 +571,9 @@ type Guide implements User {
   rating: Rating!
 }
 
+"""An ISO 8601 encoded interval string."""
+scalar Interval
+
 """A decimal degrees latitude number."""
 scalar Latitude
 
@@ -449,10 +582,72 @@ scalar Longitude
 
 type Mutation {
   """Вход"""
-  signin(email: EmailAddress!, password: String!): Session!
+  signin(
+    email: EmailAddress!
 
-  """Регистрация"""
-  signup(email: EmailAddress!, password: String!, role: Role!): Boolean!
+    """Пароль"""
+    password: String!
+  ): Session!
+
+  """Регистрация (как клиент)"""
+  signup_as_client(
+    """Изображение профиля"""
+    avatar: AttachmentInput
+
+    """Дата рождения"""
+    birthday: Date
+
+    """Контакные данные"""
+    contact: ContactInput
+
+    """Адрес электронной почты"""
+    email: EmailAddress!
+
+    """Имя"""
+    firstname: String
+
+    """Полное ФИО"""
+    fullname: String
+
+    """Фамилия"""
+    lastaname: String
+
+    """Отчество"""
+    middlename: String
+
+    """Пароль"""
+    password: String!
+  ): Client
+
+  """Регистрация (как разработчика)"""
+  signup_as_developer(
+    """Изображение профиля"""
+    avatar: AttachmentInput
+
+    """Дата рождения"""
+    birthday: Date
+
+    """Контакные данные"""
+    contact: ContactInput
+
+    """Адрес электронной почты"""
+    email: EmailAddress!
+
+    """Имя"""
+    firstname: String
+
+    """Полное ФИО"""
+    fullname: String
+
+    """Фамилия"""
+    lastaname: String
+
+    """Отчество"""
+    middlename: String
+
+    """Пароль"""
+    password: String!
+  ): Developer
 }
 
 """Mongodb object id scalar type"""
@@ -461,6 +656,9 @@ scalar ObjectId
 """Владелец"""
 type Owner implements User {
   _id: ObjectId!
+
+  """Изображение профиля"""
+  avatar: Attachment
 
   """Контакные данные"""
   contact: Contact!
@@ -497,8 +695,27 @@ scalar PhoneNumber
 type Query {
   addAttachment(input: AttachmentInput!): Attachment!
   attachment(id: ObjectId!): Attachment
+
+  """"""
+  tourist_event(id: ObjectId!): TouristEvent
+
+  """"""
+  tourist_events(after_id: ObjectId, before_id: ObjectId, page: Int! = 1, skip: Int! = 0, take: Int! = 25): [TouristEvent!]!
+
+  """"""
+  tourist_route(id: ObjectId!): TouristRoute
+
+  """"""
+  tourist_routes(after_id: ObjectId, before_id: ObjectId, page: Int! = 1, skip: Int! = 0, take: Int! = 25): [TouristRoute!]!
+
+  """"""
+  tourist_sites(after_id: ObjectId, before_id: ObjectId, page: Int! = 1, skip: Int! = 0, take: Int! = 25): [TouristSite!]!
+
+  """"""
   user(id: ObjectId!): User
-  users(id: ObjectId, skip: Int! = 0, take: Int! = 25): [User!]!
+
+  """"""
+  users(after_id: ObjectId, before_id: ObjectId, page: Int! = 1, skip: Int! = 0, take: Int! = 25): [User!]!
 }
 
 """Рейтинг"""
@@ -550,24 +767,6 @@ type Review {
   usefulness: Usefulness!
 }
 
-"""Роль"""
-enum Role {
-  """Администратор"""
-  Admin
-
-  """Клиент"""
-  Client
-
-  """Разработчик"""
-  Developer
-
-  """Экскурсовод"""
-  Guide
-
-  """Владелец"""
-  Owner
-}
-
 """Сеанс"""
 type Session {
   """Идентификатор сеанса"""
@@ -587,6 +786,45 @@ type Tokens {
 
   """Токен обновления"""
   refreshToken: String!
+}
+
+"""Туристическое мероприятие (продукт)"""
+type TouristEvent {
+  _id: ObjectId!
+
+  """Вложения"""
+  attachments: [Attachment!]!
+
+  """Комментарии"""
+  comments: [Comment!]!
+  contact: Contact!
+
+  """Описание"""
+  description: String
+
+  """Разработчик"""
+  developer: Developer!
+
+  """Экскурсовод"""
+  guide: Guide!
+
+  """Наименование"""
+  name: String!
+
+  """Цена"""
+  price: Float
+
+  """Рейтинг"""
+  rating: Rating!
+
+  """Туристический маршрут (ресурс)"""
+  route: TouristRoute!
+
+  """Статус мероприятия"""
+  status: EventStatus!
+
+  """Дата и время проведения"""
+  timing: Interval!
 }
 
 """Туристический маршрут (ресурс)"""
@@ -683,6 +921,9 @@ type Usefulness {
 """Пользователь"""
 interface User {
   _id: ObjectId!
+
+  """Изображение профиля"""
+  avatar: Attachment
 
   """Контакные данные"""
   contact: Contact!

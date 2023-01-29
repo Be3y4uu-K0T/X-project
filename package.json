@@ -4,6 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
+    "add": "yarn install && (cd client && npm install)",
     "build": "tsc -p tsconfig.json && (cd client && yarn build)",
     "start": "yarn build && node -r dotenv/config --no-deprecation ./dist/server.mjs"
   },
@@ -15,6 +16,7 @@
     "@apollo/server": "^4.3.1",
     "@typegoose/typegoose": "^10.0.0",
     "argon2": "^0.30.3",
+    "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
     "config": "^3.3.9",
     "cookie-parser": "^1.4.6",

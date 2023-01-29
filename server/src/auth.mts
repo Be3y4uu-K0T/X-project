@@ -25,6 +25,7 @@ export interface Context {
     id?: string;
     user?: User;
     token?: string;
+    role?: string;
     ip?: string;
     userAgent?: string;
 }
@@ -42,23 +43,24 @@ export const context: ContextFunction<[ExpressContextFunctionArgument], Context>
     const ip = getClientIp(req) ?? undefined;
     let userAgent = req.headers['user-agent'];
     if (req.headers['x-ucbrowser-ua']) {
-      userAgent = req.headers['x-ucbrowser-ua'] as string; // special case of UC Browser
+        userAgent = req.headers['x-ucbrowser-ua'] as string; // special case of UC Browser
     }
 
     return {
-        id: user && user.id,
+        id: (user as any)?.user_id, // BUG: Thx Mongo from @accounts/mongo
         token,
         user,
+        role: (user as any)?.role, // BUG: Thx Mongo from @accounts/mongo
         ip,
         userAgent,
     };
 };
 
 export const authChecker: AuthChecker<Context> = async ({ root, args, context, info }, roles) => {
-    if (!context.user) return false;
-    const role: string = (context.user as any).role; // BUG: Thx Mongo from @accounts/mongo
+    const role = context.role;
+    if (!role) return false;
     return roles.includes(role);
-}
+};
 
 export const accounts_password = new AccountsPassword({
     validateEmail: (email) => (typeof email === 'string' && EMAIL_ADDRESS_REGEXP.test(email)),
