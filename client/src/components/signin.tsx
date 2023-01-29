@@ -78,19 +78,18 @@ function sign_up() {
 }
 
 function sign_in() {
-  const { loading, error, data } = useQuery(SIGNIN, { variables: { }})
+  // TODO
+  // const { loading, error, data } = useQuery(SIGNIN)
 
-  setCookie
+  // setCookie
 
+  // let expires = new Date()
+  // expires.setTime(expires.getTime() + (response.data.expires_in * 1000))
+  // setCookie('access_token', response.access_token, { path: '/',  expires})
+  // setCookie('refresh_token', response.refresh_token, {path: '/', expires})
   return (
     <div>
 
     </div>
   )
 }
-
-
-//     let expires = new Date()
-//     expires.setTime(expires.getTime() + (response.data.expires_in * 1000))
-//     setCookie('access_token', response.access_token, { path: '/',  expires})
-//     setCookie('refresh_token', response.refresh_token, {path: '/', expires})
