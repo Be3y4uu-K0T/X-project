@@ -4,11 +4,10 @@ import { createRoot } from 'react-dom/client';
 import React from 'react';
 import App from './App';
 import './index.css';
-import { cookies } from './components/signin';
 
 const authLink = setContext((req, { headers }) => {
   // get the authentication token from local storage if it exists
-  const token = cookies.access_token as string;
+  const token = '';
   // return the headers to the context so httpLink can read them
   return {
     headers: {

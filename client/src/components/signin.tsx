@@ -2,7 +2,7 @@ import { useCookies } from 'react-cookie';
 import { useQuery } from '@apollo/client';
 import { gql } from '../__generated__';
 
-export const [cookies, setCookie, removeCookie] = useCookies(['access_token', 'refresh_token']);
+
 
 const SIGNUP_AS_CLIENT = gql(/* GraphQL */ `
 mutation SignUpAsClient($email: EmailAddress!, $password: String!) {
@@ -55,14 +55,38 @@ mutation SignUpAsClient($email: EmailAddress!, $password: String!) {
     }
 }`);
 
-async function sign_up() {
-    const { loading, error, data } = useQuery(SIGNUP_AS_CLIENT);
+const SIGNIN = gql(/* GraphQL */ `
+mutation SignIn($email: EmailAddress!, $password: String!) {
+  signin(email: $email, password: $password) {
+    sessionId
+    tokens {
+      accessToken
+      refreshToken
+    }
+  }
+}`);
 
-    return (
-        <div>
+function sign_up() {
+  const [cookies, setCookie, removeCookie] = useCookies(['access_token', 'refresh_token']);
+  const { loading, error, data } = useQuery(SIGNUP_AS_CLIENT);
 
-        </div>
-    );
+  return (
+      <div>
+
+      </div>
+  );
+}
+
+function sign_in() {
+  const { loading, error, data } = useQuery(SIGNIN, { variables: { }})
+
+  setCookie
+
+  return (
+    <div>
+
+    </div>
+  )
 }
 
 

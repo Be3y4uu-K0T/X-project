@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "add": "yarn install && (cd client && npm install)",
+    "install-all": "yarn install && (cd client && yarn install)",
     "build": "tsc -p tsconfig.json && (cd client && yarn build)",
     "start": "yarn build && node -r dotenv/config --no-deprecation ./dist/server.mjs"
   },
