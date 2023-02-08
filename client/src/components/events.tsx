@@ -1,5 +1,7 @@
+import { Spinner, VStack } from '@chakra-ui/react';
 import { gql } from '../__generated__/gql';
 import { useQuery } from '@apollo/client';
+import { Event } from './event';
 import React from 'react';
 
 const GET_EVENTS = gql(/* GraphQL */ `
@@ -29,13 +31,17 @@ const GET_EVENTS = gql(/* GraphQL */ `
   }
 `);
 
-export default function Events() {
-    const { loading, error, data } = useQuery(GET_EVENTS, { variables: { take: 15, page: 1 } });
+export default function Events(page: number = 1) {
+  const { loading, error, data } = useQuery(GET_EVENTS, { variables: { take: 15, page } });
 
-    if (error) return `Error: ${error}`;
-    if (loading) return <p>Loading...</p>;
+  if (error) return <h1>Error...</h1>;
+  if (loading || !data) return <Spinner />;
 
-    return data && data.events.map((event) => {
-      return <div></div>
-    });
+  return (
+    <VStack spacing={2} mt={4}>
+      {data.events.map((event) => {
+        return <Event key={event._id} {...event} />
+      })}
+    </VStack>
+  );
 }

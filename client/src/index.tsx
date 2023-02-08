@@ -1,37 +1,49 @@
-import { ApolloClient, InMemoryCache, ApolloProvider, gql, createHttpLink } from '@apollo/client';
+import { ApolloClient, InMemoryCache, ApolloProvider, createHttpLink } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
-import { createRoot } from 'react-dom/client';
-import React from 'react';
-import App from './App';
-import './index.css';
+import { ChakraProvider, ColorModeScript } from '@chakra-ui/react';
+import * as serviceWorker from './serviceWorker';
+import reportWebVitals from './reportWebVitals';
+import * as ReactDOM from 'react-dom/client';
+import * as React from 'react';
+import { App } from './App';
+
 
 const authLink = setContext((req, { headers }) => {
-  // get the authentication token from local storage if it exists
   const token = '';
-  // return the headers to the context so httpLink can read them
   return {
     headers: {
       ...headers,
-      authorization: token ? `Bearer ${token}` : "",
+      ...(token ? { authorization: `Bearer ${token}` }: undefined)
     }
-  }
+  };
 });
 
 const client = new ApolloClient({
   uri: 'http://localhost:4000/api',
   cache: new InMemoryCache(),
-  link: authLink.concat(createHttpLink({
-    uri: '/api',
-  })),
+  link: authLink.concat(createHttpLink({ uri: '/api', })),
 });
 
 const container = document.getElementById('root')!;
-const root = createRoot(container);
+const root = ReactDOM.createRoot(container);
 
 root.render(
-  <ApolloProvider client={client}>
-    {/* <Provider store={store}> */}
-      <App />
-    {/* </Provider> */}
-  </ApolloProvider>
-);
+  <React.StrictMode>
+    <ChakraProvider>
+      <ApolloProvider client={client}>
+        <ColorModeScript />
+        <App />
+      </ApolloProvider>
+    </ChakraProvider>
+  </React.StrictMode>,
+)
+
+// If you want your app to work offline and load faster, you can change
+// unregister() to register() below. Note this comes with some pitfalls.
+// Learn more about service workers: https://cra.link/PWA
+serviceWorker.unregister()
+
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+reportWebVitals()

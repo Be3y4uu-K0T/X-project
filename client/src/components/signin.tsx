@@ -2,8 +2,6 @@ import { useCookies } from 'react-cookie';
 import { useQuery } from '@apollo/client';
 import { gql } from '../__generated__';
 
-
-
 const SIGNUP_AS_CLIENT = gql(/* GraphQL */ `
 mutation SignUpAsClient($email: EmailAddress!, $password: String!) {
     signup_as_client(email: $email, password: $password) {

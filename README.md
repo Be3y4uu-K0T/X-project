@@ -1,6 +1,6 @@
 # X-PROJECT
 
-`X-project` -- это кодовое название нашего проекта решения цифровой платформы проекта «Креатур», который предствляет из себя набор из 2 модулей `/server` и `/client`, написанные на ЯП `typescript` на NodeJS в связке с СУБД MongoDB, с используемым стеком: `mongodb` и `@typegoose/typegoose` для СУБД MongoDB;  `@apollo/server`, `@apollo/client`, `type-graphql` и `class-validator` для языка запросов GraphQL; `@apollo/server/express4` для REST API (для особых случаев); `@accounts/*`, `express-jwt` и `argon2` для авторизации и аунтефикации, использующие `jsonwebtoken`; `@apollo/client`, `react`, `redux` для frontend-стороны; `dotenv` для конфигурации из `.env` файла.
+`X-project` -- это кодовое название нашего проекта решения цифровой платформы проекта «Креатур», который предствляет из себя набор из 2 модулей `/server` и `/client`, написанные на ЯП `typescript` на NodeJS в связке с СУБД MongoDB, с используемым стеком: `mongodb` и `@typegoose/typegoose` для СУБД MongoDB;  `@apollo/server`, `@apollo/client`, `type-graphql` и `class-validator` для языка запросов GraphQL; `@apollo/server/express4` для REST API (для особых случаев); `@accounts/*`, `express-jwt` и `argon2` для авторизации и аунтефикации, использующие `jsonwebtoken`; `@apollo/client`, `react`, и `@chakra-ui/react` для frontend-стороны; `dotenv` для конфигурации из `.env` файла.
 
 ### <b>Ремарка:</b>
 <b>Просим прощения!!!</b>

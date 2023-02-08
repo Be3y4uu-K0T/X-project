@@ -1,18 +1,27 @@
-import React from 'react';
-import logo from './logo.svg';
+import * as React from 'react';
+import './index.css';
+import {
+  ChakraProvider,
+  Box,
+  Text,
+  Link,
+  VStack,
+  Code,
+  Grid,
+  extendTheme,
+  theme as base,
+} from '@chakra-ui/react';
 import Header from './components/header';
-import Footer from './components/footer';
-import Events from './components/events';
-import './App.css';
 
-function App() {
-  return (
-    <div className="App">
-      <Header/>
-      {Events()}
-      <Footer/>
-    </div>
-  );
-};
+const theme = extendTheme({
+  fonts: {
+    heading: `Montserrat, ${base.fonts?.heading}`,
+    body: `Montserrat, ${base.fonts?.body}`,
+  }
+});
 
-export default App;
+export const App = () => (
+  <ChakraProvider theme={theme}>
+    <Header />
+  </ChakraProvider>
+)
